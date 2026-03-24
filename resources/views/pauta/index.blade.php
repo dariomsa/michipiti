@@ -94,6 +94,31 @@
     border-color:#198754 !important;
     color:#fff !important;
   }
+  .mini-hours-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));
+    gap:8px;
+  }
+  .mini-hour-slot{
+    border:1px solid var(--ec-border);
+    background:#fff;
+    border-radius:10px;
+    min-height:42px;
+    font-size:.82rem;
+    font-weight:800;
+    color:#111827;
+    transition:all .15s ease;
+  }
+  .mini-hour-slot:hover{
+    border-color:#93c5fd;
+    background:#eff6ff;
+  }
+  .mini-hour-slot.is-selected{
+    border-color:#2563eb;
+    background:#dbeafe;
+    color:#1d4ed8;
+    box-shadow:inset 0 0 0 1px #2563eb;
+  }
   @media (max-width: 768px){
     .cronograma-header-row, .cronograma-item{ grid-template-columns:80px 1.6fr 1fr 1fr 1fr; font-size:.82rem; }
     .calendar-table{ min-width:640px; }
@@ -295,8 +320,9 @@
 
             <div class="mb-3">
               <label class="form-label form-label-sm">Hora de publicación</label>
-              <select class="form-select form-select-sm" id="modalHoraPub"></select>
-              <div class="text-muted mt-1" style="font-size:12px;">Solo se muestran horarios disponibles dentro de pauta.</div>
+              <input type="hidden" id="modalHoraPub" />
+              <div class="mini-hours-grid" id="miniHoursGrid"></div>
+              <div class="text-muted mt-1" style="font-size:12px;">Haz clic en un horario disponible para seleccionarlo.</div>
             </div>
 
             <input type="hidden" id="modalCarruselId" value="">
@@ -383,6 +409,7 @@
   const modalDiaPublicacion = document.getElementById('modalDiaPublicacion');
   const modalFechaPub = document.getElementById('modalFechaPub');
   const modalHoraPub = document.getElementById('modalHoraPub');
+  const miniHoursGrid = document.getElementById('miniHoursGrid');
   const modalCarruselId = document.getElementById('modalCarruselId');
   const btnProgramar = document.getElementById('btnProgramar');
   const btnCopiarTodo = document.getElementById('btnCopiarTodo');
@@ -488,16 +515,48 @@
     return idx;
   }
 
+  function copyPlainText(text) {
+    const plain = String(text || '');
+    const temp = document.createElement('textarea');
+    temp.value = plain;
+    temp.setAttribute('readonly', '');
+    temp.style.position = 'fixed';
+    temp.style.opacity = '0';
+    temp.style.left = '-9999px';
+    document.body.appendChild(temp);
+    temp.focus();
+    temp.select();
+    temp.setSelectionRange(0, temp.value.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(temp);
+    if (!ok) {
+      throw new Error('copy_failed');
+    }
+  }
+
   async function copiarContenidoCompleto() {
     if (!btnCopiarTodo) return;
-    const parts = [modalCopy.textContent, modalHashtags.textContent, modalCreditos.textContent]
-      .map(v => (v || '').trim())
-      .filter(v => v && v !== '—');
-    if (!parts.length) return animateCopyButton(false);
+    const copy = (modalCopy.textContent || '').trim() === '—' ? '' : (modalCopy.textContent || '').trim();
+    const hashtags = (modalHashtags.textContent || '').trim() === '—' ? '' : (modalHashtags.textContent || '').trim();
+    const creditos = (modalCreditos.textContent || '').trim() === '—' ? '' : (modalCreditos.textContent || '').trim();
+
+    const partes = [];
+    if (copy) partes.push(copy);
+    if (hashtags) partes.push(hashtags);
+    if (creditos) partes.push(creditos);
+
+    const textoFinal = partes.join('\n\n');
+
+    if (!textoFinal) {
+      animateCopyButton(false);
+      return;
+    }
+
     try {
-      await navigator.clipboard.writeText(parts.join('\n\n'));
+      copyPlainText(textoFinal);
       animateCopyButton(true);
     } catch (e) {
+      console.error(e);
       animateCopyButton(false);
     }
   }
@@ -593,38 +652,47 @@
         .filter(Boolean)
     );
 
-    const allowedHours = getAllowedHoursForDate(dateISO)
+    const allowedHours = getAllowedHoursForDate(dateISO);
+    const availableHours = allowedHours
       .filter(hour => !isPastDateHour(dateISO, hour))
       .filter(hour => !occupied.has(hour));
 
-    const preferredHour = currentItem?.hora && allowedHours.includes(currentItem.hora)
+    const preferredHour = currentItem?.hora && availableHours.includes(currentItem.hora)
       ? currentItem.hora
-      : (allowedHours[0] || '');
+      : (availableHours[0] || '');
 
-    modalHoraPub.innerHTML = '';
+    modalHoraPub.value = preferredHour;
+    miniHoursGrid.innerHTML = '';
 
     if (!allowedHours.length) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = 'Sin horarios disponibles';
-      modalHoraPub.appendChild(option);
-      modalHoraPub.disabled = true;
+      miniHoursGrid.innerHTML = '<div class="text-muted small">Sin horarios configurados para este día.</div>';
       btnProgramar.disabled = true;
       return;
     }
 
     allowedHours.forEach(function (hour) {
-      const option = document.createElement('option');
-      option.value = hour;
-      option.textContent = hour;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'mini-hour-slot';
+      button.textContent = hour;
+
       if (hour === preferredHour) {
-        option.selected = true;
+        button.classList.add('is-selected');
       }
-      modalHoraPub.appendChild(option);
+
+      button.addEventListener('click', function () {
+        modalHoraPub.value = hour;
+        miniHoursGrid.querySelectorAll('.mini-hour-slot.is-selected').forEach(function (node) {
+          node.classList.remove('is-selected');
+        });
+        button.classList.add('is-selected');
+        btnProgramar.disabled = false;
+      });
+
+      miniHoursGrid.appendChild(button);
     });
 
-    modalHoraPub.disabled = false;
-    btnProgramar.disabled = false;
+    btnProgramar.disabled = !preferredHour;
   }
 
   function renderAgenda() {
