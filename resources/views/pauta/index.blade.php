@@ -295,8 +295,8 @@
 
             <div class="mb-3">
               <label class="form-label form-label-sm">Hora de publicación</label>
-              <input type="time" class="form-control form-control-sm" id="modalHoraPub" step="900" />
-              <div class="text-muted mt-1" style="font-size:12px;">Intervalo: 15 minutos</div>
+              <select class="form-select form-select-sm" id="modalHoraPub"></select>
+              <div class="text-muted mt-1" style="font-size:12px;">Solo se muestran horarios disponibles dentro de pauta.</div>
             </div>
 
             <input type="hidden" id="modalCarruselId" value="">
@@ -328,12 +328,35 @@
   const STORAGE_KEY = 'pauta_fecha_actual';
   const STORAGE_TTL = 3 * 60 * 1000;
   let scheduleItems = [];
+  const scheduleItemsCache = {};
   let currentDateISO = todayLocalISO();
   let pageSize = 20;
   let currentPage = 1;
   const START_MINUTES = 6 * 60;
   const END_MINUTES   = 24 * 60;
   const STEP_MINUTES  = 15;
+  const weekdaysHours = [
+    '06:00','07:00','08:15','09:30','10:45','11:30','12:15','12:30','12:45','13:00','13:15','13:30',
+    '13:45','14:00','14:15','14:30','14:45','15:30','16:00','17:15','18:30','19:45','20:15','21:00',
+    '22:15','22:45'
+  ];
+  const saturdayHours = [
+    '09:00','10:30','11:30','12:00','13:30','15:00',
+    '15:30','16:30','18:00','19:30','20:30','22:00'
+  ];
+  const sundayHours = [
+    '09:30','10:45','12:00','13:30','15:00',
+    '16:30','18:00','19:30','21:00','22:00'
+  ];
+  const scheduleByDay = {
+    0: weekdaysHours,
+    1: weekdaysHours,
+    2: weekdaysHours,
+    3: weekdaysHours,
+    4: weekdaysHours,
+    5: saturdayHours,
+    6: sundayHours
+  };
   const mainTitle = document.getElementById('mainTitle');
   const agendaFecha = document.getElementById('agendaFecha');
   const agendaChip = document.getElementById('agendaChip');
@@ -437,6 +460,24 @@
     return minutesToHHMM(Math.max(0, Math.min((24 * 60) - 1, Math.round(total / STEP_MINUTES) * STEP_MINUTES)));
   }
 
+  function calendarDayIndexFromDate(dateStr) {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const day = date.getDay();
+    return day === 0 ? 6 : day - 1;
+  }
+
+  function getAllowedHoursForDate(dateStr) {
+    const idx = calendarDayIndexFromDate(dateStr);
+    return idx === null ? [] : (scheduleByDay[idx] || []);
+  }
+
+  function isPastDateHour(dateStr, hour) {
+    if (!dateStr || !hour) return false;
+    return new Date(`${dateStr}T${hour}:00`).getTime() < Date.now();
+  }
+
   function getItemsForDate(iso) {
     return scheduleItems.filter(function (it) { return it.fechaISO === iso; });
   }
@@ -501,10 +542,89 @@
           canvaUrl: r.canvaUrl || r.canva_url || ''
         };
       });
+      scheduleItemsCache[fechaISO] = scheduleItems;
     } catch (e) {
       console.error('loadItemsByDate error:', e);
       scheduleItems = [];
+      scheduleItemsCache[fechaISO] = [];
     }
+  }
+
+  async function getItemsForDateRemote(iso) {
+    if (scheduleItemsCache[iso]) {
+      return scheduleItemsCache[iso];
+    }
+
+    try {
+      const url = new URL(URL_ITEMS, window.location.origin);
+      url.searchParams.set('fecha', iso);
+      const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      const raw = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+      const items = raw.map(function (r) {
+        return {
+          id: r.id,
+          fechaISO: (r.fechaISO || r.fecha || '').slice(0, 10) || iso,
+          hora: normalizeToStep((r.hora || '').slice(0, 5)),
+          contenido: r.contenido || r.titulo || '',
+          autor: r.autor || (r.user && r.user.name ? r.user.name : '') || '',
+          disenador: r.disenador || '',
+          estado: r.estado || '',
+          copy: r.copy || '',
+          hashtags: r.hashtags || '',
+          creditos: r.creditos || '',
+          canvaUrl: r.canvaUrl || r.canva_url || ''
+        };
+      });
+      scheduleItemsCache[iso] = items;
+      return items;
+    } catch (e) {
+      console.error('getItemsForDateRemote error:', e);
+      return [];
+    }
+  }
+
+  async function renderAvailableHours(dateISO, currentItem) {
+    const items = await getItemsForDateRemote(dateISO);
+    const occupied = new Set(
+      items
+        .filter(item => String(item.id) !== String(currentItem?.id || ''))
+        .map(item => item.hora)
+        .filter(Boolean)
+    );
+
+    const allowedHours = getAllowedHoursForDate(dateISO)
+      .filter(hour => !isPastDateHour(dateISO, hour))
+      .filter(hour => !occupied.has(hour));
+
+    const preferredHour = currentItem?.hora && allowedHours.includes(currentItem.hora)
+      ? currentItem.hora
+      : (allowedHours[0] || '');
+
+    modalHoraPub.innerHTML = '';
+
+    if (!allowedHours.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Sin horarios disponibles';
+      modalHoraPub.appendChild(option);
+      modalHoraPub.disabled = true;
+      btnProgramar.disabled = true;
+      return;
+    }
+
+    allowedHours.forEach(function (hour) {
+      const option = document.createElement('option');
+      option.value = hour;
+      option.textContent = hour;
+      if (hour === preferredHour) {
+        option.selected = true;
+      }
+      modalHoraPub.appendChild(option);
+    });
+
+    modalHoraPub.disabled = false;
+    btnProgramar.disabled = false;
   }
 
   function renderAgenda() {
@@ -598,7 +718,7 @@
     return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
   }
 
-  function openModal(item) {
+  async function openModal(item) {
     modalCarruselId.value = item.id || '';
     modalTitulo.textContent = item.contenido || '—';
     if (item.canvaUrl && item.canvaUrl.trim() !== '') {
@@ -616,12 +736,12 @@
     modalHashtags.textContent = item.hashtags || '—';
     modalCreditos.textContent = item.creditos || '—';
     modalFechaPub.value = item.fechaISO || currentDateISO;
-    modalHoraPub.value = item.hora || '00:00';
     modalDiaPublicacion.textContent = setDiaPublicacionFromFecha(modalFechaPub.value);
+    await renderAvailableHours(modalFechaPub.value, item);
     if (modalBootstrap) modalBootstrap.show();
   }
 
-  function openModalForSlot(fechaISO, hora, item) {
+  async function openModalForSlot(fechaISO, hora, item) {
     if (item) return openModal(item);
     modalCarruselId.value = '';
     modalTitulo.textContent = '(Libre)';
@@ -633,8 +753,8 @@
     modalHashtags.textContent = '';
     modalCreditos.textContent = '';
     modalFechaPub.value = fechaISO;
-    modalHoraPub.value = hora;
     modalDiaPublicacion.textContent = setDiaPublicacionFromFecha(fechaISO);
+    await renderAvailableHours(fechaISO, null);
     if (modalBootstrap) modalBootstrap.show();
   }
 
@@ -645,8 +765,6 @@
     let hora = (modalHoraPub.value || '').trim();
     if (!fecha) return alert('Selecciona fecha.');
     if (!hora) return alert('Selecciona hora.');
-    hora = normalizeToStep(hora);
-    modalHoraPub.value = hora;
 
     try {
       const res = await fetch(URL_PROGRAMAR_TPL.replace('__ID__', encodeURIComponent(id)), {
@@ -694,6 +812,14 @@
     renderPauta();
   });
   pautaFecha?.addEventListener('change', async function () { await setCurrentDate(pautaFecha.value); });
+  modalFechaPub?.addEventListener('change', async function () {
+    modalDiaPublicacion.textContent = setDiaPublicacionFromFecha(modalFechaPub.value);
+    const currentId = modalCarruselId.value || '';
+    const currentItem = currentId
+      ? (scheduleItems.find(item => String(item.id) === String(currentId)) || { id: currentId, hora: null })
+      : null;
+    await renderAvailableHours(modalFechaPub.value, currentItem);
+  });
   btnPrev?.addEventListener('click', async function () { await setCurrentDate(addDays(currentDateISO, -1)); });
   btnNext?.addEventListener('click', async function () { await setCurrentDate(addDays(currentDateISO, 1)); });
   btnToday?.addEventListener('click', async function () { await setCurrentDate(todayLocalISO()); });
