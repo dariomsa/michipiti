@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title','Planificacion / Comercial')
+@section('title','Planificacion Audiovisual')
 
 @push('styles')
 <style>
@@ -351,7 +351,7 @@
 <div class="propuestas-wrap">
 
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="page-title m-0">Planificación / Reserva Comercial</h3>
+    <h3 class="page-title m-0">Planificación Audiovisual</h3>
   </div>
 
   <div class="toolbar mb-3">
@@ -414,7 +414,7 @@
   </div>
 
   <div class="mt-3 text-muted" style="font-size: 13px;">
-    Tip: haz clic en una celda para agregar o editar. Los productos nuevos se guardan por defecto en estado <strong>BORRADOR</strong>.
+    Tip: haz clic en una celda para agregar o editar. Los audiovisuales nuevos se guardan por defecto en estado <strong>BORRADOR</strong>.
   </div>
 </div>
 
@@ -519,6 +519,7 @@
 @push('scripts')
 <script>
   const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const plannerBaseUrl = '/videografia/planificacion';
   const puedeAprobar = @json($puedeAprobar);
   const puedeDragDrop = @json($puedeDragDrop);
 
@@ -1077,7 +1078,7 @@
   }
 
   async function loadPeriodistas(){
-    const users = await fetchJSON('/planificador/periodistas');
+    const users = await fetchJSON(`${plannerBaseUrl}/responsables`);
 
     formResponsable.innerHTML = `<option value="">-- Seleccione periodista --</option>`;
 
@@ -1093,7 +1094,7 @@
     Object.keys(slotData).forEach(key => delete slotData[key]);
 
     const start = fmtISODate(weekStart);
-    const items = await fetchJSON(`/planificador/week?week_start=${encodeURIComponent(start)}`);
+    const items = await fetchJSON(`${plannerBaseUrl}/week?week_start=${encodeURIComponent(start)}`);
 
     items.forEach(item => {
       const hora = (item.hora || '').slice(0, 5);
@@ -1251,7 +1252,7 @@
       setOriginOptions(['pendiente'], 'pendiente', true);
     }
 
-    modalTitle.textContent = existing.id ? 'Editar producto' : 'Crear producto';
+    modalTitle.textContent = existing.id ? 'Editar audiovisual' : 'Crear audiovisual';
     setFormEditable(existing.origen === 'pauta' ? 'pauta' : 'full');
 
     toggleActionButtons({ ...existing, __key: key });
@@ -1266,7 +1267,7 @@
       return;
     }
 
-    const res = await fetchJSON('/planificador/move', {
+    const res = await fetchJSON(`${plannerBaseUrl}/move`, {
       method: 'POST',
       body: JSON.stringify({
         source_key: source.key,
@@ -1303,7 +1304,7 @@
 
     const oldKey = Object.keys(slotData).find(key => Number(slotData[key]?.id) === Number(payload.id));
 
-    const res = await fetchJSON('/planificador/store', {
+    const res = await fetchJSON(`${plannerBaseUrl}/store`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -1355,7 +1356,7 @@
       }
     }catch(error){
       console.error(error);
-      await showError(getErrorMessage(error, 'No se pudo guardar el producto.'));
+      await showError(getErrorMessage(error, 'No se pudo guardar el audiovisual.'));
     }
   });
 
@@ -1367,13 +1368,13 @@
         return;
       }
 
-      const confirmation = await confirmAction('¿Aprobar este producto?', 'Aprobar');
+      const confirmation = await confirmAction('¿Aprobar este audiovisual?', 'Aprobar');
       if(!confirmation.isConfirmed){
         return;
       }
 
       try{
-        const res = await fetchJSON('/planificador/aprobar', {
+        const res = await fetchJSON(`${plannerBaseUrl}/aprobar`, {
           method: 'POST',
           body: JSON.stringify({ id: propuestaId })
         });
@@ -1381,13 +1382,13 @@
         if(res.ok){
           await loadWeek();
           slotModal.hide();
-          await showSuccess('Producto aprobado correctamente.');
+          await showSuccess('Audiovisual aprobado correctamente.');
         }else{
           await showError(res.message || 'No se pudo aprobar.');
         }
       }catch(error){
         console.error(error);
-        await showError(getErrorMessage(error, 'No se pudo aprobar el producto.'));
+        await showError(getErrorMessage(error, 'No se pudo aprobar el audiovisual.'));
       }
     });
   }
@@ -1407,13 +1408,13 @@
       return;
     }
 
-    const confirmation = await confirmAction('Enviar este producto a pauta y asignar un responsable?', 'Aceptar');
+    const confirmation = await confirmAction('Enviar este audiovisual a pauta y asignar un responsable?', 'Aceptar');
     if(!confirmation.isConfirmed){
       return;
     }
 
     try{
-      const res = await fetchJSON('/planificador/to-pauta', {
+      const res = await fetchJSON(`${plannerBaseUrl}/to-pauta`, {
         method: 'POST',
         body: JSON.stringify({
           propuesta_id: propuestaId,
@@ -1443,10 +1444,10 @@
       applySearchFilter();
       slotModal.hide();
 
-      await showSuccess('Producto enviado a pauta.');
+      await showSuccess('Audiovisual enviado a pauta.');
     }catch(error){
       console.error(error);
-      await showError(getErrorMessage(error, 'No se pudo cambiar el producto a pauta.'));
+      await showError(getErrorMessage(error, 'No se pudo cambiar el audiovisual a pauta.'));
     }
   });
 
@@ -1458,13 +1459,13 @@
       return;
     }
 
-    const confirmation = await confirmAction('¿Seguro que deseas eliminar este producto?', 'Eliminar');
+    const confirmation = await confirmAction('¿Seguro que deseas eliminar este audiovisual?', 'Eliminar');
     if(!confirmation.isConfirmed){
       return;
     }
 
     try{
-      const res = await fetchJSON(`/planificador/${propuestaId}`, {
+      const res = await fetchJSON(`${plannerBaseUrl}/${propuestaId}`, {
         method: 'DELETE'
       });
 
@@ -1490,10 +1491,10 @@
 
       applySearchFilter();
       slotModal.hide();
-      await showSuccess('Producto eliminado correctamente.');
+      await showSuccess('Audiovisual eliminado correctamente.');
     }catch(error){
       console.error(error);
-      await showError(getErrorMessage(error, 'No se pudo eliminar el producto.'));
+      await showError(getErrorMessage(error, 'No se pudo eliminar el audiovisual.'));
     }
   });
 

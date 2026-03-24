@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class TipoProducto extends Model
+class TipoAudiovisual extends Model
 {
     use HasFactory;
 
-    public const SLUG_CARRUSEL = 'tipo_carrusel';
+    public const SLUG_EDICION = 'edicion';
+    public const SLUG_GRABACION = 'grabacion';
+    public const SLUG_GRABACION_EDICION = 'grabacion_edicion';
 
-    protected $table = 'tipo_productos';
+    protected $table = 'tipo_audiovisuales';
 
     /**
      * @var list<string>
@@ -29,11 +31,6 @@ class TipoProducto extends Model
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
-    }
-
-    public function productos(): HasMany
-    {
-        return $this->hasMany(Producto::class);
     }
 
     public function audiovisuales(): HasMany

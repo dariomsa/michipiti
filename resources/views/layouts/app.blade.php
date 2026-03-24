@@ -209,7 +209,7 @@
             display: flex;
             align-items: center;
             gap: 0.6rem;
-            padding: 0.65rem 0.8rem;
+            padding: 0.65rem 1.8rem;
             font-size: 0.88rem;
             border-radius: 0;
             transition: 0.18s ease-in-out;
@@ -454,7 +454,14 @@
         $listadoUrl = route('manager.productos.index');
     } elseif ($user?->hasRole('periodista')) {
         $listadoUrl = route('periodista.productos.index');
+    } elseif ($user?->hasRole('videografia')) {
+        $listadoUrl = route('videografia.audiovisuales.index');
     }
+
+    $audiovisualesMenu = $audiovisualesMenu ?? [
+        ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => route('videografia.audiovisuales.index')],
+        ['label' => 'Planificación', 'icon' => 'bi-calendar3', 'url' => route('videografia.audiovisuales.planificacion')],
+    ];
 
     $layoutMenu = $layoutMenu ?? array_values(array_filter([
         $showDashboard ? ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'url' => route('dashboard')] : null,
@@ -503,7 +510,7 @@
         <aside class="sidebar" data-sidebar>
             <div class="sidebar-title">
                 <i class="bi bi-layout-text-sidebar-reverse"></i>
-                <span>Menu</span>
+                <span>Menú</span>
             </div>
 
             <ul class="sidebar-nav">
@@ -521,6 +528,29 @@
                     </li>
                 @endforeach
             </ul>
+
+            @if($audiovisualesMenu !== [])
+                <div class="sidebar-title pt-3">
+                    <i class="bi bi-camera-reels"></i>
+                    <span>Audiovisuales</span>
+                </div>
+
+                <ul class="sidebar-nav">
+                    @foreach($audiovisualesMenu as $item)
+                        @php
+                            $href = $item['url'] ?? '#';
+                            $active = $href !== '#' && url()->current() === $href;
+                        @endphp
+
+                        <li>
+                            <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
+                                <i class="bi {{ $item['icon'] }}"></i>
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </aside>
 
         <div class="content-panel">

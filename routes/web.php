@@ -8,10 +8,38 @@ use App\Http\Controllers\Manager\ProductoController as ManagerProductoController
 use App\Http\Controllers\PautaController;
 use App\Http\Controllers\PlanificadorController;
 use App\Http\Controllers\Periodista\ProductoController as PeriodistaProductoController;
+use App\Http\Controllers\Videografia\AudiovisualController as VideografiaAudiovisualController;
+use App\Http\Controllers\Videografia\PlanificadorController as VideografiaPlanificadorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    $user = auth()->user();
+
+    if (! $user) {
+        return redirect()->route('login');
+    }
+
+    if ($user->hasRole('editor')) {
+        return redirect()->route('editor.productos.index');
+    }
+
+    if ($user->hasRole('disenador')) {
+        return redirect()->route('disenador.productos.index');
+    }
+
+    if ($user->hasRole('disenador_manager')) {
+        return redirect()->route('manager.productos.index');
+    }
+
+    if ($user->hasRole('periodista')) {
+        return redirect()->route('periodista.productos.index');
+    }
+
+    if ($user->hasRole('videografia')) {
+        return redirect()->route('videografia.audiovisuales.index');
+    }
+
+    return redirect()->route('dashboard');
 });
 
 Route::middleware('guest')->group(function (): void {
@@ -80,4 +108,22 @@ Route::prefix('manager')
         Route::get('/productos/{producto}/edit', [ManagerProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [ManagerProductoController::class, 'update'])->name('productos.update');
         Route::post('/productos/{producto}/mensajes', [ManagerProductoController::class, 'storeMessage'])->name('productos.mensajes.store');
+    });
+
+Route::prefix('videografia')
+    ->name('videografia.')
+    ->middleware(['auth', 'role:videografia,editor,director'])
+    ->group(function (): void {
+        Route::get('/listado', [VideografiaAudiovisualController::class, 'index'])->name('audiovisuales.index');
+        Route::get('/listado/{audiovisual}/edit', [VideografiaAudiovisualController::class, 'edit'])->name('audiovisuales.edit');
+        Route::put('/listado/{audiovisual}', [VideografiaAudiovisualController::class, 'update'])->name('audiovisuales.update');
+        Route::post('/listado/{audiovisual}/mensajes', [VideografiaAudiovisualController::class, 'storeMessage'])->name('audiovisuales.mensajes.store');
+        Route::get('/planificacion', [VideografiaPlanificadorController::class, 'index'])->name('audiovisuales.planificacion');
+        Route::get('/planificacion/week', [VideografiaPlanificadorController::class, 'week']);
+        Route::get('/planificacion/responsables', [VideografiaPlanificadorController::class, 'responsables']);
+        Route::post('/planificacion/store', [VideografiaPlanificadorController::class, 'store']);
+        Route::post('/planificacion/move', [VideografiaPlanificadorController::class, 'move']);
+        Route::post('/planificacion/aprobar', [VideografiaPlanificadorController::class, 'approve']);
+        Route::post('/planificacion/to-pauta', [VideografiaPlanificadorController::class, 'toPauta']);
+        Route::delete('/planificacion/{audiovisual}', [VideografiaPlanificadorController::class, 'destroy']);
     });

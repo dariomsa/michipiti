@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureRoleMiddleware
 {
-    public function handle(Request $request, Closure $next, string $roles): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
@@ -16,7 +16,12 @@ class EnsureRoleMiddleware
             abort(401);
         }
 
-        $allowedRoles = array_filter(array_map('trim', explode(',', $roles)));
+        $allowedRoles = collect($roles)
+            ->flatMap(fn (string $roleGroup): array => explode(',', $roleGroup))
+            ->map(fn (string $role): string => trim($role))
+            ->filter()
+            ->values()
+            ->all();
 
         if (! $user->hasAnyRole($allowedRoles)) {
             abort(403, 'No tienes permisos para acceder a esta sección.');

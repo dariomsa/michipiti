@@ -6,6 +6,8 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use App\Models\CarruselMensaje;
 use App\Models\CarruselMovimiento;
+use App\Models\AudiovisualMensaje;
+use App\Models\AudiovisualMovimiento;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -71,6 +73,26 @@ class User extends Authenticatable
         return $this->hasMany(Producto::class, 'manager_id');
     }
 
+    public function audiovisuales(): HasMany
+    {
+        return $this->hasMany(Audiovisual::class);
+    }
+
+    public function audiovisualesComoEditor(): HasMany
+    {
+        return $this->hasMany(Audiovisual::class, 'editor_id');
+    }
+
+    public function audiovisualesComoDisenador(): HasMany
+    {
+        return $this->hasMany(Audiovisual::class, 'disenador_id');
+    }
+
+    public function audiovisualesComoManager(): HasMany
+    {
+        return $this->hasMany(Audiovisual::class, 'manager_id');
+    }
+
     public function mensajesCarrusel(): HasMany
     {
         return $this->hasMany(CarruselMensaje::class);
@@ -79,5 +101,15 @@ class User extends Authenticatable
     public function movimientosCarrusel(): HasMany
     {
         return $this->hasMany(CarruselMovimiento::class);
+    }
+
+    public function mensajesAudiovisual(): HasMany
+    {
+        return $this->hasMany(AudiovisualMensaje::class);
+    }
+
+    public function movimientosAudiovisual(): HasMany
+    {
+        return $this->hasMany(AudiovisualMovimiento::class);
     }
 }

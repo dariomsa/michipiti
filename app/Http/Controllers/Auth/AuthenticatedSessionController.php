@@ -31,6 +31,10 @@ class AuthenticatedSessionController extends Controller
             return route('periodista.productos.index');
         }
 
+        if ($user?->hasRole('videografia')) {
+            return route('videografia.audiovisuales.index');
+        }
+
         return route('dashboard');
     }
 
