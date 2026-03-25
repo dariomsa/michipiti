@@ -44,11 +44,11 @@
 
 @section('content')
 @php
-  $searchColClass = $canFilterPeriodista ? 'col-12 col-xl-3 col-lg-4' : 'col-12 col-xl-4 col-lg-4';
+  $searchColClass = 'col-12 col-xl-3 col-lg-4';
   $sectionColClass = 'col-12 col-xl-2 col-lg-2';
   $designerColClass = 'col-12 col-xl-2 col-lg-2';
   $stateColClass = 'col-12 col-xl-1 col-lg-2';
-  $dateColClass = $canFilterPeriodista ? 'col-12 col-xl-1 col-lg-2' : 'col-12 col-xl-2 col-lg-2';
+  $dateColClass = 'col-12 col-xl-1 col-lg-2';
   $submitColClass = 'col-12 col-xl-1 col-lg-12 d-grid';
 @endphp
 <section class="flex-grow-1">
@@ -90,19 +90,17 @@
             </select>
           </div>
 
-          @if($canFilterPeriodista)
-            <div class="col-12 col-xl-2 col-lg-2">
-              <label class="form-label mb-1">Periodista</label>
-              <select class="form-select" name="periodista" style="border-radius:0;">
-                <option value="">Todos</option>
-                @foreach($periodistas as $p)
-                  <option value="{{ $p->id }}" {{ (string)($periodistaFiltro ?? '') == (string)$p->id ? 'selected' : '' }}>
-                    {{ $p->name }}
-                  </option>
-                @endforeach
-              </select>
-            </div>
-          @endif
+          <div class="col-12 col-xl-2 col-lg-2">
+            <label class="form-label mb-1">Periodista</label>
+            <select class="form-select" name="periodista" style="border-radius:0;">
+              <option value="">Todos</option>
+              @foreach($periodistas as $p)
+                <option value="{{ $p->id }}" {{ (string)($periodistaFiltro ?? '') == (string)$p->id ? 'selected' : '' }}>
+                  {{ $p->name }}
+                </option>
+              @endforeach
+            </select>
+          </div>
 
           <div class="{{ $designerColClass }}">
             <label class="form-label mb-1">Diseñador</label>

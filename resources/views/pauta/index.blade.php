@@ -322,7 +322,7 @@
               <label class="form-label form-label-sm">Hora de publicación</label>
               <input type="hidden" id="modalHoraPub" />
               <div class="mini-hours-grid" id="miniHoursGrid"></div>
-              <div class="text-muted mt-1" style="font-size:12px;">Haz clic en un horario disponible para seleccionarlo.</div>
+              <div class="text-muted mt-1" style="font-size:12px;" id="modalHourHelp">Haz clic en un horario disponible para seleccionarlo.</div>
             </div>
 
             <input type="hidden" id="modalCarruselId" value="">
@@ -334,9 +334,12 @@
               <button class="btn btn-outline-secondary flex-grow-1" type="button" data-bs-dismiss="modal">Cancelar</button>
             </div>
 
-            <div class="mt-2 text-muted" style="font-size:12px;">
-              Guarda la fecha/hora usando <code>/pauta/{id}/programar</code>.
-            </div>
+            @if(!($puedeProgramar ?? false))
+              <div class="mt-2 text-muted" style="font-size:12px;">
+                Solo el director puede modificar fecha y hora en pauta.
+              </div>
+            @endif
+
           </div>
         </div>
       </div>
@@ -348,6 +351,7 @@
 @push('scripts')
 <script>
 (function () {
+  const puedeProgramar = @json($puedeProgramar ?? false);
   const URL_ITEMS = @json(route('pauta.items'));
   const URL_PROGRAMAR_TPL = @json(url('/pauta/__ID__/programar'));
   const CSRF = @json(csrf_token());
@@ -410,6 +414,7 @@
   const modalFechaPub = document.getElementById('modalFechaPub');
   const modalHoraPub = document.getElementById('modalHoraPub');
   const miniHoursGrid = document.getElementById('miniHoursGrid');
+  const modalHourHelp = document.getElementById('modalHourHelp');
   const modalCarruselId = document.getElementById('modalCarruselId');
   const btnProgramar = document.getElementById('btnProgramar');
   const btnCopiarTodo = document.getElementById('btnCopiarTodo');
@@ -644,6 +649,18 @@
   }
 
   async function renderAvailableHours(dateISO, currentItem) {
+    if (!puedeProgramar) {
+      modalHoraPub.value = currentItem?.hora || '';
+      miniHoursGrid.innerHTML = currentItem?.hora
+        ? `<div class="text-muted small">Hora programada: ${escapeHTML(currentItem.hora)}</div>`
+        : '<div class="text-muted small">Sin permisos para modificar la hora.</div>';
+      btnProgramar.disabled = true;
+      if (modalHourHelp) {
+        modalHourHelp.textContent = 'Solo el director puede modificar la programación.';
+      }
+      return;
+    }
+
     const items = await getItemsForDateRemote(dateISO);
     const occupied = new Set(
       items
@@ -663,14 +680,29 @@
 
     modalHoraPub.value = preferredHour;
     miniHoursGrid.innerHTML = '';
+    if (modalHourHelp) {
+      modalHourHelp.textContent = 'Haz clic en un horario disponible para seleccionarlo.';
+    }
 
     if (!allowedHours.length) {
       miniHoursGrid.innerHTML = '<div class="text-muted small">Sin horarios configurados para este día.</div>';
       btnProgramar.disabled = true;
+      if (modalHourHelp) {
+        modalHourHelp.textContent = 'No hay horarios habilitados para esta fecha.';
+      }
       return;
     }
 
-    allowedHours.forEach(function (hour) {
+    if (!availableHours.length) {
+      miniHoursGrid.innerHTML = '<div class="text-muted small">No hay horarios disponibles para esta fecha.</div>';
+      btnProgramar.disabled = true;
+      if (modalHourHelp) {
+        modalHourHelp.textContent = 'Los horarios pasados ya fueron publicados y no se pueden reutilizar.';
+      }
+      return;
+    }
+
+    availableHours.forEach(function (hour) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'mini-hour-slot';
@@ -827,6 +859,10 @@
   }
 
   async function programar() {
+    if (!puedeProgramar) {
+      return alert('Solo el director puede modificar la programación en pauta.');
+    }
+
     const id = (modalCarruselId.value || '').trim();
     if (!id) return alert('Este bloque está libre. Selecciona un carrusel programado para editarlo.');
     const fecha = (modalFechaPub.value || '').trim();
@@ -881,6 +917,10 @@
   });
   pautaFecha?.addEventListener('change', async function () { await setCurrentDate(pautaFecha.value); });
   modalFechaPub?.addEventListener('change', async function () {
+    if (!puedeProgramar) {
+      return;
+    }
+
     modalDiaPublicacion.textContent = setDiaPublicacionFromFecha(modalFechaPub.value);
     const currentId = modalCarruselId.value || '';
     const currentItem = currentId

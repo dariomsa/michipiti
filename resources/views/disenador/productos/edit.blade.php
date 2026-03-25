@@ -613,6 +613,11 @@
 </div>
 
 <div class="copy-toast" id="copyToast">Copiado</div>
+@include('periodista.productos.partials.autosave', [
+  'autosaveEnabled' => true,
+  'autosaveUrl' => route('disenador.productos.autosave', $producto),
+  'autosaveFields' => ['programado_metricool'],
+])
 @endsection
 
 @push('scripts')

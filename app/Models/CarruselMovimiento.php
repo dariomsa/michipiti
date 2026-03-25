@@ -48,6 +48,7 @@ class CarruselMovimiento extends Model
     public function getAccionLabelAttribute(): string
     {
         return match ($this->accion) {
+            'APROBADO' => 'Aprobado',
             'ENVIADO_REVISION' => 'Enviado a revision',
             'ENVIADO_DISENO' => 'Enviado a diseno',
             'ASIGNADO_DISENADOR' => 'Asignado a disenador',

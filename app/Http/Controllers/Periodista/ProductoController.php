@@ -14,6 +14,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -61,10 +62,7 @@ class ProductoController extends Controller
             'estado' => $estado,
             'fecha' => $fecha,
             'secciones' => Seccion::query()->where('activa', true)->orderBy('nombre')->get(),
-            'periodistas' => User::query()
-                ->whereHas('roles', fn ($query) => $query->where('name', 'periodista'))
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            'periodistas' => $this->periodistasDisponibles($user),
             'disenadores' => User::query()
                 ->whereHas('roles', fn ($query) => $query->where('name', 'disenador'))
                 ->orderBy('name')
@@ -122,8 +120,6 @@ class ProductoController extends Controller
 
         $validated = $request->validate([
             'titulo' => ['required', 'string', 'max:200'],
-            'fecha' => ['required', 'date'],
-            'hora' => ['required', 'date_format:H:i'],
             'seccion' => [
                 'required',
                 'string',
@@ -214,8 +210,6 @@ class ProductoController extends Controller
 
         $producto->fill([
             'titulo' => $validated['titulo'],
-            'fecha' => $validated['fecha'],
-            'hora' => $validated['hora'],
             'seccion' => $validated['seccion'],
             'prioridad' => $validated['prioridad'],
             'copy' => $validated['copy'] ?? null,
@@ -253,11 +247,54 @@ class ProductoController extends Controller
             ->with('success', 'Producto actualizado correctamente.');
     }
 
-    public function storeMessage(Request $request, Producto $producto): RedirectResponse
+    public function autosave(Request $request, Producto $producto): JsonResponse
     {
         abort_unless($this->puedeEntrarAlEditor($producto), 404);
         abort_unless($this->puedeGestionarProducto($request->user(), $producto), 403);
         abort_unless($this->puedeEditarProducto($producto), 403);
+
+        $validated = $request->validate([
+            'titulo' => ['required', 'string', 'max:200'],
+            'seccion' => [
+                'required',
+                'string',
+                Rule::exists('secciones', 'nombre')->where('activa', true),
+            ],
+            'prioridad' => ['required', 'string', Rule::in($this->prioridades())],
+            'copy' => ['nullable', 'string'],
+            'hashtags' => ['nullable', 'string', 'max:600'],
+            'creditos' => ['nullable', 'string', 'max:600'],
+            'laminas' => ['nullable', 'array'],
+            'laminas.*.id' => ['nullable', 'integer'],
+            'laminas.*.titulo' => ['nullable', 'string', 'max:200'],
+            'laminas.*.descripcion' => ['nullable', 'string', 'max:600'],
+        ]);
+
+        $producto->fill([
+            'titulo' => $validated['titulo'],
+            'seccion' => $validated['seccion'],
+            'prioridad' => $validated['prioridad'],
+            'copy' => $validated['copy'] ?? null,
+            'hashtags' => $validated['hashtags'] ?? null,
+            'creditos' => $validated['creditos'] ?? null,
+        ]);
+        $producto->save();
+
+        if ($producto->esCarrusel() && !empty($validated['laminas']) && is_array($validated['laminas'])) {
+            $this->autosaveLaminas($producto, $validated['laminas']);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated_at' => optional($producto->updated_at)->toISOString(),
+            'message' => 'Guardado automáticamente.',
+        ]);
+    }
+
+    public function storeMessage(Request $request, Producto $producto): RedirectResponse
+    {
+        abort_unless($this->puedeEntrarAlEditor($producto), 404);
+        abort_unless($this->puedeGestionarProducto($request->user(), $producto), 403);
 
         $validated = $request->validate([
             'mensaje' => ['required', 'string'],
@@ -287,6 +324,40 @@ class ProductoController extends Controller
         return redirect()
             ->route($this->routeBaseFromRequest($request).'.edit', $producto)
             ->with('success', 'Mensaje enviado correctamente.');
+    }
+
+    public function approve(Request $request, Producto $producto): RedirectResponse
+    {
+        abort_unless($this->puedeEntrarAlEditor($producto), 404);
+        abort_unless($this->puedeGestionarProducto($request->user(), $producto), 403);
+        abort_unless($this->puedeAprobarProducto($producto), 403);
+
+        $validated = $request->validate([
+            'canva_url' => ['required', 'url', 'max:600'],
+        ]);
+
+        $estadoAnterior = $producto->estado;
+
+        $producto->update([
+            'canva_url' => $validated['canva_url'],
+            'estado' => 'APROBADO',
+        ]);
+
+        $this->registrarMovimiento(
+            producto: $producto,
+            accion: 'APROBADO',
+            estadoAnterior: $estadoAnterior,
+            estadoNuevo: 'APROBADO',
+            motivo: 'Producto aprobado desde el listado.',
+            meta: [
+                'canva_url' => $validated['canva_url'],
+                'tipo_producto' => $producto->tipoProducto?->slug,
+            ],
+        );
+
+        return redirect()
+            ->route($this->routeBaseFromRequest($request).'.index')
+            ->with('success', 'Producto aprobado correctamente.');
     }
 
     /**
@@ -410,6 +481,40 @@ class ProductoController extends Controller
             });
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $laminas
+     */
+    protected function autosaveLaminas(Producto $producto, array $laminas): void
+    {
+        $existing = $producto->laminas()->get()->keyBy('id');
+
+        foreach (array_values($laminas) as $index => $laminaData) {
+            $titulo = trim((string) ($laminaData['titulo'] ?? ''));
+            $descripcion = trim((string) ($laminaData['descripcion'] ?? ''));
+
+            if ($titulo === '' && $descripcion === '') {
+                continue;
+            }
+
+            $laminaId = isset($laminaData['id']) ? (int) $laminaData['id'] : null;
+            $lamina = $laminaId ? $existing->get($laminaId) : null;
+
+            if (! $lamina instanceof CarruselLamina) {
+                $lamina = new CarruselLamina([
+                    'carrusel_id' => $producto->id,
+                ]);
+            }
+
+            $lamina->fill([
+                'orden' => $index + 1,
+                'titulo' => $titulo,
+                'descripcion' => $descripcion,
+            ]);
+            $lamina->carrusel_id = $producto->id;
+            $lamina->save();
+        }
+    }
+
     protected function syncLaminaArchivos(Request $request, Producto $producto, CarruselLamina $lamina, int $index): void
     {
         $files = $request->file("laminas.{$index}.archivos", []);
@@ -525,7 +630,7 @@ class ProductoController extends Controller
     {
         $user = request()->user();
 
-        if ($user?->hasRole('editor')) {
+        if ($user?->hasAnyRole(['editor', 'director'])) {
             return in_array($producto->estado, ['BORRADOR', 'EN_REVISION', 'DEVUELTO'], true);
         }
 
@@ -549,9 +654,33 @@ class ProductoController extends Controller
         return (int) $producto->user_id === (int) $user->id;
     }
 
+    protected function puedeAprobarProducto(Producto $producto): bool
+    {
+        $user = request()->user();
+
+        return ($user?->hasAnyRole(['editor', 'director']) ?? false)
+            && $producto->estado === 'FINALIZADO';
+    }
+
     protected function puedeVerTodosLosProductos(?User $user): bool
     {
-        return $user?->hasAnyRole(['editor', 'disenador', 'disenador_manager']) ?? false;
+        return $user?->hasAnyRole(['editor', 'director', 'disenador', 'disenador_manager']) ?? false;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    protected function periodistasDisponibles(?User $user): Collection
+    {
+        $query = User::query()
+            ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('name', 'periodista'))
+            ->orderBy('name');
+
+        if (! $this->puedeVerTodosLosProductos($user) && $user) {
+            $query->where('id', $user->id);
+        }
+
+        return $query->get(['id', 'name']);
     }
 
     protected function scopeOrigenVisible(Builder $query): void
@@ -574,6 +703,10 @@ class ProductoController extends Controller
             return 'editor.productos';
         }
 
+        if (str_starts_with($routeName, 'director.')) {
+            return 'director.productos';
+        }
+
         if (str_starts_with($routeName, 'disenador.')) {
             return 'disenador.productos';
         }
@@ -591,6 +724,7 @@ class ProductoController extends Controller
 
         return match ($routeBase) {
             'editor.productos' => "editor.productos.{$view}",
+            'director.productos' => "director.productos.{$view}",
             'disenador.productos' => "disenador.productos.{$view}",
             'manager.productos' => "manager.productos.{$view}",
             default => "periodista.productos.{$view}",

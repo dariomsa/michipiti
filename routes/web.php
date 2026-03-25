@@ -3,6 +3,8 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Disenador\ProductoController as DisenadorProductoController;
+use App\Http\Controllers\Director\ProductoController as DirectorProductoController;
+use App\Http\Controllers\Director\DashboardController as DirectorDashboardController;
 use App\Http\Controllers\Editor\ProductoController as EditorProductoController;
 use App\Http\Controllers\Manager\ProductoController as ManagerProductoController;
 use App\Http\Controllers\PautaController;
@@ -21,6 +23,10 @@ Route::get('/', function () {
 
     if ($user->hasRole('editor')) {
         return redirect()->route('editor.productos.index');
+    }
+
+    if ($user->hasRole('director')) {
+        return redirect()->route('director.productos.index');
     }
 
     if ($user->hasRole('disenador')) {
@@ -51,7 +57,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', [DirectorDashboardController::class, 'index'])->name('dashboard');
     Route::get('/pauta', [PautaController::class, 'index'])->name('pauta.index');
     Route::get('/pauta/items', [PautaController::class, 'items'])->name('pauta.items');
     Route::post('/pauta/{id}/programar', [PautaController::class, 'programar'])->name('pauta.programar');
@@ -74,6 +80,7 @@ Route::prefix('periodista')
         Route::get('/productos/create', [PeriodistaProductoController::class, 'create'])->name('productos.create');
         Route::get('/productos/{producto}/edit', [PeriodistaProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [PeriodistaProductoController::class, 'update'])->name('productos.update');
+        Route::patch('/productos/{producto}/autosave', [PeriodistaProductoController::class, 'autosave'])->name('productos.autosave');
         Route::post('/productos/{producto}/mensajes', [PeriodistaProductoController::class, 'storeMessage'])->name('productos.mensajes.store');
     });
 
@@ -85,7 +92,22 @@ Route::prefix('editor')
         Route::get('/productos/create', [EditorProductoController::class, 'create'])->name('productos.create');
         Route::get('/productos/{producto}/edit', [EditorProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [EditorProductoController::class, 'update'])->name('productos.update');
+        Route::patch('/productos/{producto}/autosave', [EditorProductoController::class, 'autosave'])->name('productos.autosave');
+        Route::post('/productos/{producto}/approve', [EditorProductoController::class, 'approve'])->name('productos.approve');
         Route::post('/productos/{producto}/mensajes', [EditorProductoController::class, 'storeMessage'])->name('productos.mensajes.store');
+    });
+
+Route::prefix('director')
+    ->name('director.')
+    ->middleware(['auth', 'role:director'])
+    ->group(function (): void {
+        Route::get('/productos', [DirectorProductoController::class, 'index'])->name('productos.index');
+        Route::get('/productos/create', [DirectorProductoController::class, 'create'])->name('productos.create');
+        Route::get('/productos/{producto}/edit', [DirectorProductoController::class, 'edit'])->name('productos.edit');
+        Route::put('/productos/{producto}', [DirectorProductoController::class, 'update'])->name('productos.update');
+        Route::patch('/productos/{producto}/autosave', [DirectorProductoController::class, 'autosave'])->name('productos.autosave');
+        Route::post('/productos/{producto}/approve', [DirectorProductoController::class, 'approve'])->name('productos.approve');
+        Route::post('/productos/{producto}/mensajes', [DirectorProductoController::class, 'storeMessage'])->name('productos.mensajes.store');
     });
 
 Route::prefix('disenador')
@@ -96,6 +118,7 @@ Route::prefix('disenador')
         Route::get('/productos/create', [DisenadorProductoController::class, 'create'])->name('productos.create');
         Route::get('/productos/{producto}/edit', [DisenadorProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [DisenadorProductoController::class, 'update'])->name('productos.update');
+        Route::patch('/productos/{producto}/autosave', [DisenadorProductoController::class, 'autosave'])->name('productos.autosave');
         Route::post('/productos/{producto}/mensajes', [DisenadorProductoController::class, 'storeMessage'])->name('productos.mensajes.store');
     });
 
@@ -107,6 +130,7 @@ Route::prefix('manager')
         Route::get('/productos/create', [ManagerProductoController::class, 'create'])->name('productos.create');
         Route::get('/productos/{producto}/edit', [ManagerProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [ManagerProductoController::class, 'update'])->name('productos.update');
+        Route::patch('/productos/{producto}/autosave', [ManagerProductoController::class, 'autosave'])->name('productos.autosave');
         Route::post('/productos/{producto}/mensajes', [ManagerProductoController::class, 'storeMessage'])->name('productos.mensajes.store');
     });
 

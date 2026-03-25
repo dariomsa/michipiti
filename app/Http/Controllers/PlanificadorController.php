@@ -212,6 +212,13 @@ class PlanificadorController extends Controller
 
     public function move(Request $request): JsonResponse
     {
+        if (! $request->user()->hasRole('director')) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Solo el director puede mover productos desde el planificador.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $data = $request->validate(
             [
                 'source_key' => ['required', 'string'],

@@ -2,6 +2,14 @@
 
 Fecha: 2026-03-23
 
+Actualización rápida:
+
+- se montó notificación por Slack para `carrusel_mensajes` y `carrusel_movimientos`
+- se creó módulo propio de `director` para productos
+- en `pauta`, solo `director` puede reprogramar
+- en listado de `editor` y `director` ya existe acción `Aprobar`
+- el bloque de menú `Audiovisuales` quedó comentado para la presentación
+
 ## Punto actual
 
 El foco principal del último bloque fue el módulo `videografia`.
@@ -174,6 +182,64 @@ Nota:
   - en `AudiovisualController.php` todavía hay catálogos hardcodeados para requerimientos, redes y productos digitales
 - El módulo videografía todavía está en working tree y no todo está consolidado en commit.
 - No se volvió a correr una suite amplia de tests; cualquier verificación pendiente sigue siendo manual/funcional.
+- En `pauta`, el botón de copiar texto quedó pendiente de validación final cuando el entorno esté en `https`; en `http` el portapapeles del navegador puede fallar aunque la lógica del texto ya esté montada.
+
+## Cambios importantes de hoy fuera de videografía
+
+- Slack:
+  - observers registrados en `AppServiceProvider`
+  - clases nuevas:
+    - `app/Observers/CarruselMensajeObserver.php`
+    - `app/Observers/CarruselMovimientoObserver.php`
+    - `app/Services/Carrusel/CarruselSlackNotifier.php`
+    - `app/Services/Slack/SlackNotificationService.php`
+  - migración nueva:
+    - `2026_03_24_090000_add_slack_fields_to_users_table.php`
+  - `users` ahora contempla:
+    - `email_slack`
+    - `slack_user_id`
+  - los DMs ya funcionan en prueba real
+  - no se excluye al actor
+  - el mensaje muestra:
+    - título
+    - responsable
+    - acción por actor
+    - estado
+    - motivo si existe
+
+- Director:
+  - módulo creado con rutas, controlador y vistas propias
+  - usa comportamiento base igual a `editor` por ahora
+  - rutas:
+    - `director.productos.index`
+    - `director.productos.edit`
+    - `director.productos.update`
+    - `director.productos.mensajes.store`
+    - `director.productos.approve`
+
+- Aprobación desde listado:
+  - en `editor` y `director` existe acción `Aprobar`
+  - aparece cuando el producto está en `FINALIZADO`
+  - abre modal con `canva_url`
+  - al aceptar cambia estado a `APROBADO`
+  - registra movimiento `APROBADO`
+  - probado exitosamente con ambos roles
+
+- Pauta:
+  - visible para cualquier autenticado
+  - solo `director` puede modificar fecha y hora
+  - para otros roles, el modal queda en solo lectura
+  - el modal de programación ya muestra solo horas disponibles
+  - no permite reutilizar horas pasadas
+
+- Planificador:
+  - contador del header ahora calcula disponibles solo desde la hora actual en adelante
+  - si el día ya no tiene slots futuros, muestra `Cerrado`
+
+- Layout:
+  - `/` redirige a `login` si no hay sesión
+  - si hay sesión, redirige al listado según rol
+  - menú de `Audiovisuales` quedó comentado temporalmente para la presentación
 
 ## Archivos clave para retomar mañana
 
@@ -187,6 +253,16 @@ Nota:
 - `resources/views/videografia/audiovisuales/planificador.blade.php`
 - `routes/web.php`
 - `database/seeders/TipoAudiovisualSeeder.php`
+- `app/Http/Controllers/Periodista/ProductoController.php`
+- `app/Http/Controllers/Director/ProductoController.php`
+- `app/Http/Controllers/PautaController.php`
+- `app/Services/Carrusel/CarruselSlackNotifier.php`
+- `app/Services/Slack/SlackNotificationService.php`
+- `resources/views/editor/productos/index.blade.php`
+- `resources/views/director/productos/index.blade.php`
+- `resources/views/pauta/index.blade.php`
+- `resources/views/planificador.blade.php`
+- `resources/views/layouts/app.blade.php`
 
 ## Qué falta revisar mañana
 

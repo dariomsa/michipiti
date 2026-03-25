@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Disenador;
 use App\Http\Controllers\Periodista\ProductoController as BaseProductoController;
 use App\Models\Producto;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -120,5 +121,29 @@ class ProductoController extends BaseProductoController
         return redirect()
             ->route('disenador.productos.index')
             ->with('success', 'Producto actualizado correctamente.');
+    }
+
+    public function autosave(Request $request, Producto $producto): JsonResponse
+    {
+        abort_unless($this->puedeEntrarAlEditor($producto), 404);
+        abort_unless($this->puedeGestionarProducto($request->user(), $producto), 403);
+        abort_unless(in_array($producto->estado, $this->estadosEditables(), true), 403);
+
+        $validated = $request->validate([
+            'programado_metricool' => ['nullable', 'boolean'],
+        ]);
+
+        $producto->fill([
+            'programado_metricool' => $producto->programado_metricool
+                ? true
+                : (bool) ($validated['programado_metricool'] ?? false),
+        ]);
+        $producto->save();
+
+        return response()->json([
+            'ok' => true,
+            'updated_at' => optional($producto->updated_at)->toISOString(),
+            'message' => 'Guardado automáticamente.',
+        ]);
     }
 }

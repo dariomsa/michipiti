@@ -7,6 +7,7 @@ use App\Models\Producto;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -116,5 +117,31 @@ class ProductoController extends BaseProductoController
         return redirect()
             ->route('manager.productos.index')
             ->with('success', 'Producto actualizado correctamente.');
+    }
+
+    public function autosave(Request $request, Producto $producto): JsonResponse
+    {
+        abort_unless($this->puedeEntrarAlEditor($producto), 404);
+        abort_unless($this->puedeGestionarProducto($request->user(), $producto), 403);
+
+        $validated = $request->validate([
+            'disenador_id' => ['required', 'integer', 'exists:users,id'],
+            'dificultad' => ['required', Rule::in(['BAJA', 'ALTA'])],
+            'pauta_comercial' => ['nullable', 'boolean'],
+        ]);
+
+        $producto->fill([
+            'disenador_id' => (int) $validated['disenador_id'],
+            'manager_id' => $request->user()?->id,
+            'dificultad' => $validated['dificultad'],
+            'pauta_comercial' => (bool) ($validated['pauta_comercial'] ?? false),
+        ]);
+        $producto->save();
+
+        return response()->json([
+            'ok' => true,
+            'updated_at' => optional($producto->updated_at)->toISOString(),
+            'message' => 'Guardado automáticamente.',
+        ]);
     }
 }

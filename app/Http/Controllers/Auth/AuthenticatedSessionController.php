@@ -19,6 +19,10 @@ class AuthenticatedSessionController extends Controller
             return route('editor.productos.index');
         }
 
+        if ($user?->hasRole('director')) {
+            return route('director.productos.index');
+        }
+
         if ($user?->hasRole('disenador')) {
             return route('disenador.productos.index');
         }

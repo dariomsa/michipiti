@@ -212,6 +212,76 @@
     border-color: var(--gray-border) !important;
   }
 
+  .slot-wrap{
+    padding: 6px 8px;
+    text-align: left;
+    line-height: 1.15;
+  }
+
+  .slot-topline{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    margin-bottom:2px;
+  }
+
+  .slot-title{
+    font-weight:700;
+    font-size:12px;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .slot-meta{
+    font-size:11px;
+    opacity:.9;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .slot-origin-badge{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:1px 6px;
+    border-radius:999px;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    border:1px solid transparent;
+    line-height:1.2;
+  }
+
+  .slot-origin-pauta{
+    background:#fff7ed;
+    border-color:#fdba74;
+    color:#9a3412;
+  }
+
+  .slot-origin-comercial{
+    background:#eff6ff;
+    border-color:#93c5fd;
+    color:#1d4ed8;
+  }
+
+  .slot-origin-propuesta{
+    background:#f3f4f6;
+    border-color:#d1d5db;
+    color:#374151;
+  }
+
+  .slot-origin-pendiente{
+    background:#fff7ed;
+    border-color:#fed7aa;
+    color:#c2410c;
+  }
+
   .legend-dot{
     display:inline-block;
     width:12px;
@@ -236,6 +306,15 @@
     font-weight:800;
     font-size:14px;
     color:#111827;
+  }
+
+  .day-head-today{
+    background:#fff7ed;
+    box-shadow: inset 0 0 0 1px #fdba74;
+  }
+
+  .slot-today{
+    background-image: linear-gradient(to bottom, rgba(251,146,60,.08), rgba(251,146,60,0));
   }
 
   .day-head-stats{
@@ -297,11 +376,6 @@
     cursor: not-allowed !important;
   }
 
-  .drag-hint{
-    font-size: 12px;
-    color: #6b7280;
-  }
-
   @media (max-width: 1400px){
     :root{
       --day-col-w: 220px;
@@ -345,7 +419,7 @@
 
 @php
   $puedeAprobar = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
-  $puedeDragDrop = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
+  $puedeDragDrop = auth()->user() && auth()->user()->hasRole('director');
 @endphp
 
 <div class="propuestas-wrap">
@@ -379,12 +453,6 @@
   </div>
 
   <div class="mb-3 d-flex flex-wrap gap-3 small text-muted">
-    <span><span class="legend-dot" style="background:#dcfce7;border:1px solid #15803d;"></span>Aprobado / Finalizado</span>
-    <span><span class="legend-dot" style="background:#ffedd5;border:1px solid #fb923c;"></span>Pendiente</span>
-    <span><span class="legend-dot" style="background:#fef3c7;border:1px solid #f59e0b;"></span>En Proceso</span>
-    <span><span class="legend-dot" style="background:#dbeafe;border:1px solid #93c5fd;"></span>Horario fuera de pauta editable</span>
-  </div>
-  <div class="mb-3 d-flex flex-wrap gap-3 small text-muted">
     <span class="mini-stat">
       <span class="mini-dot mini-dot-orange"></span>Ocupados
     </span>
@@ -413,8 +481,11 @@
     </div>
   </div>
 
-  <div class="mt-3 text-muted" style="font-size: 13px;">
-    Tip: haz clic en una celda para agregar o editar. Los productos nuevos se guardan por defecto en estado <strong>BORRADOR</strong>.
+  <div class="mt-3 d-flex flex-wrap gap-3 small text-muted">
+    <span><span class="legend-dot" style="background:#dcfce7;border:1px solid #15803d;"></span>Aprobado / Finalizado</span>
+    <span><span class="legend-dot" style="background:#ffedd5;border:1px solid #fb923c;"></span>Pendiente</span>
+    <span><span class="legend-dot" style="background:#fef3c7;border:1px solid #f59e0b;"></span>En Proceso</span>
+    <span><span class="legend-dot" style="background:#dbeafe;border:1px solid #93c5fd;"></span>Horario fuera de pauta editable</span>
   </div>
 </div>
 
@@ -627,6 +698,15 @@
     return `${start.getDate()} ${months[start.getMonth()]} ${start.getFullYear()} - ${end.getDate()} ${months[end.getMonth()]} ${end.getFullYear()}`;
   }
 
+  function isTodayDate(date){
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    return date.getFullYear() === today.getFullYear()
+      && date.getMonth() === today.getMonth()
+      && date.getDate() === today.getDate();
+  }
+
   function slotKey(fecha, hora){
     return `${fecha}|${hora}`;
   }
@@ -734,13 +814,22 @@
     `;
   }
 
+  function buildHeaderClosedHTML(){
+    return `
+      <div class="day-head-stats">
+        <span class="mini-stat text-muted">Cerrado</span>
+      </div>
+    `;
+  }
+
   function renderHeaders(){
     for(let i = 0; i < 7; i++){
       const d = addDays(weekStart, i);
       const th = document.getElementById(`h${i}`);
       if(th){
+        const todayClass = isTodayDate(d) ? ' day-head-today' : '';
         th.innerHTML = `
-          <div class="day-head">
+          <div class="day-head${todayClass}">
             <div class="day-head-title">${fmtHeader(d, dayNames[i])}</div>
             ${buildHeaderStatHTML(0, 0)}
           </div>
@@ -758,8 +847,14 @@
 
       let occupied = 0;
       let available = 0;
+      let futureSlots = 0;
 
       allowedHours.forEach(hour => {
+        if(isPastSlot(dayIndex, hour)){
+          return;
+        }
+
+        futureSlots++;
         const key = slotKey(fecha, hour);
         const item = slotData[key];
         if(item && (item.titulo || item.copy || item.seccion)){
@@ -771,10 +866,12 @@
 
       const th = document.getElementById(`h${dayIndex}`);
       if(th){
+        const currentDate = addDays(weekStart, dayIndex);
+        const todayClass = isTodayDate(currentDate) ? ' day-head-today' : '';
         th.innerHTML = `
-          <div class="day-head">
-            <div class="day-head-title">${fmtHeader(addDays(weekStart, dayIndex), dayNames[dayIndex])}</div>
-            ${buildHeaderStatHTML(available, occupied)}
+          <div class="day-head${todayClass}">
+            <div class="day-head-title">${fmtHeader(currentDate, dayNames[dayIndex])}</div>
+            ${futureSlots > 0 ? buildHeaderStatHTML(available, occupied) : buildHeaderClosedHTML()}
           </div>
         `;
       }
@@ -904,27 +1001,38 @@
 
     if(!data || !(data.titulo || data.copy || data.seccion)) return;
 
+    td.title = [
+      `Titulo: ${data.titulo || data.seccion || 'Contenido'}`,
+      `Responsable: ${data.responsable_nombre || 'Sin responsable'}`,
+      `Estado: ${data.estado || 'BORRADOR'}`,
+      `${data.origen || '-'}`,
+    ].join('\n');
+
     const wrap = document.createElement('div');
-    wrap.style.padding = '6px 8px';
-    wrap.style.textAlign = 'left';
-    wrap.style.lineHeight = '1.15';
+    wrap.className = 'slot-wrap';
+
+    const topLine = document.createElement('div');
+    topLine.className = 'slot-topline';
 
     const title = document.createElement('div');
-    title.style.fontWeight = '700';
-    title.style.fontSize = '12px';
+    title.className = 'slot-title';
     title.textContent = data.titulo || data.seccion || 'Contenido';
 
-    const meta = document.createElement('div');
-    meta.style.fontSize = '11px';
-    meta.style.opacity = '0.90';
+    const origin = (data.origen || '').toLowerCase();
+    const badge = document.createElement('span');
+    badge.className = `slot-origin-badge slot-origin-${origin || 'propuesta'}`;
+    badge.textContent = origin || '-';
 
+    const meta = document.createElement('div');
+    meta.className = 'slot-meta';
     meta.textContent = [
       data.estado || 'BORRADOR',
-      data.origen || '',
       data.responsable_nombre || 'Sin responsable'
     ].filter(Boolean).join(' • ');
 
-    wrap.appendChild(title);
+    topLine.appendChild(title);
+    topLine.appendChild(badge);
+    wrap.appendChild(topLine);
     wrap.appendChild(meta);
     td.appendChild(wrap);
     td.classList.add('busy', getStatusClass(data));
@@ -967,6 +1075,7 @@
         const td = document.createElement('td');
         const allowed = isAllowedHour(dayIndex, hour);
         const isPast = isPastSlot(dayIndex, hour);
+        const currentDate = addDays(weekStart, dayIndex);
 
         td.dataset.hour = hour;
         td.dataset.day = String(dayIndex);
@@ -974,6 +1083,10 @@
         td.dataset.past = isPast ? '1' : '0';
         td.className = 'slot';
         td.title = `${hour} | ${dayNames[dayIndex]}`;
+
+        if(isTodayDate(currentDate)){
+          td.classList.add('slot-today');
+        }
 
         if(isPast){
           td.classList.add('slot-not-allowed');

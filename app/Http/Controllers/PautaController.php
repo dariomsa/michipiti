@@ -12,7 +12,9 @@ class PautaController extends Controller
 {
     public function index(): View
     {
-        return view('pauta.index');
+        return view('pauta.index', [
+            'puedeProgramar' => auth()->user()?->hasRole('director') ?? false,
+        ]);
     }
 
     public function items(Request $request): JsonResponse
@@ -53,6 +55,12 @@ class PautaController extends Controller
 
     public function programar(Request $request, string $id): JsonResponse
     {
+        if (! ($request->user()?->hasRole('director') ?? false)) {
+            return response()->json([
+                'message' => 'Solo el director puede modificar la programación en pauta.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'fecha' => ['required', 'date'],
             'hora' => ['required', 'date_format:H:i'],

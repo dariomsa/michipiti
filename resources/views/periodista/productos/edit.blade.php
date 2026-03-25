@@ -272,19 +272,21 @@
             <div class="row g-3 mb-3">
               <div class="col-md-3">
                 <label class="form-label">Fecha</label>
-                <input required
-                       type="date"
+                <div class="form-control rounded-0 bg-light">
+                  {{ old('fecha', optional($producto->fecha)->format('d/m/Y')) ?: '-' }}
+                </div>
+                <input type="hidden"
                        name="fecha"
-                       class="form-control rounded-0"
                        value="{{ old('fecha', optional($producto->fecha)->format('Y-m-d')) }}">
               </div>
 
               <div class="col-md-3">
                 <label class="form-label">Hora</label>
-                <input required
-                       type="time"
+                <div class="form-control rounded-0 bg-light">
+                  {{ old('hora', $producto->hora ? substr($producto->hora, 0, 5) : '') ?: '-' }}
+                </div>
+                <input type="hidden"
                        name="hora"
-                       class="form-control rounded-0"
                        value="{{ old('hora', $producto->hora ? substr($producto->hora, 0, 5) : '') }}">
               </div>
 
@@ -505,6 +507,12 @@
     </div>
   </div>
 </div>
+@include('periodista.productos.partials.autosave', [
+  'autosaveEnabled' => ! $readOnly,
+  'autosaveUrl' => route($routeBase.'.autosave', $producto),
+  'autosaveFields' => ['titulo', 'seccion', 'prioridad', 'copy', 'hashtags', 'creditos'],
+  'autosaveLaminas' => $canEditLaminas,
+])
 @endsection
 
 @push('scripts')

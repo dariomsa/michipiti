@@ -27,6 +27,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'email_slack',
+        'slack_user_id',
         'password',
     ];
 

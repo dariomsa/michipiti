@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>@yield('title', 'Creacion de Productos Digitales')</title>
+    <title>@yield('title', 'Michipiti')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -76,9 +76,25 @@
         }
 
         .brand img {
-            max-width: 190px;
+            max-width: 165px;
             width: 100%;
             height: auto;
+        }
+
+        .brand-text {
+            display: inline-flex;
+            flex-direction: column;
+            line-height: 1.05;
+            min-width: 0;
+        }
+
+        .brand-version {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #fbbf24;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            white-space: nowrap;
         }
 
         .brand-mark {
@@ -448,6 +464,8 @@
 
     if ($user?->hasRole('editor')) {
         $listadoUrl = route('editor.productos.index');
+    } elseif ($user?->hasRole('director')) {
+        $listadoUrl = route('director.productos.index');
     } elseif ($user?->hasRole('disenador')) {
         $listadoUrl = route('disenador.productos.index');
     } elseif ($user?->hasRole('disenador_manager')) {
@@ -475,12 +493,10 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a href="{{ $listadoUrl }}" class="brand">
-                @if(file_exists(public_path('images/michitipiti-blanco.png')))
-                    <img src="{{ asset('images/michitipiti-blanco.png') }}" alt="Michipiti" />
-                @else
-                    <span class="brand-mark"><i class="bi bi-grid-1x2-fill"></i></span>
-                    <span>Creacion de Productos Digitales</span>
-                @endif
+                <img src="https://michipiti.elcomercio.com/images/chatmichipiti-logo.svg" alt="Chat Michipiti" />
+                <span class="brand-text">
+                    <span class="brand-version">2.0</span>
+                </span>
             </a>
 
             <button class="mobile-toggle" type="button" data-sidebar-toggle aria-label="Abrir menu">
@@ -529,7 +545,7 @@
                 @endforeach
             </ul>
 
-            @if($audiovisualesMenu !== [])
+            {{-- @if($audiovisualesMenu !== [])
                 <div class="sidebar-title pt-3">
                     <i class="bi bi-camera-reels"></i>
                     <span>Audiovisuales</span>
@@ -550,7 +566,7 @@
                         </li>
                     @endforeach
                 </ul>
-            @endif
+            @endif --}}
         </aside>
 
         <div class="content-panel">
