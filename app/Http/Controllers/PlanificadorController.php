@@ -27,6 +27,27 @@ class PlanificadorController extends Controller
         ]);
     }
 
+    public function horarios()
+    {
+        $schedule = $this->scheduleByDayZeroBased();
+        $allHours = collect($schedule)
+            ->flatten()
+            ->unique()
+            ->sort(function (string $a, string $b): int {
+                [$hourA, $minuteA] = array_map('intval', explode(':', $a));
+                [$hourB, $minuteB] = array_map('intval', explode(':', $b));
+
+                return ($hourA * 60 + $minuteA) <=> ($hourB * 60 + $minuteB);
+            })
+            ->values();
+
+        return view('planificador_horarios', [
+            'dayNames' => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+            'schedule' => $schedule,
+            'allHours' => $allHours,
+        ]);
+    }
+
     public function week(Request $request): JsonResponse
     {
         $data = $request->validate(
@@ -507,31 +528,55 @@ class PlanificadorController extends Controller
     private function isAllowedSchedule(string $date, string $time): bool
     {
         $dayOfWeek = Carbon::parse($date)->dayOfWeekIso;
+        $scheduleByDay = $this->scheduleByDayIso();
+
+        return in_array($time, $scheduleByDay[$dayOfWeek] ?? [], true);
+    }
+
+    /**
+     * @return array<int, list<string>>
+     */
+    private function scheduleByDayZeroBased(): array
+    {
         $weekdaysHours = [
-            '06:00', '07:00', '08:15', '09:30', '10:45', '11:30', '12:15', '12:30', '12:45', '13:00', '13:15', '13:30',
-            '13:45', '14:00', '14:15', '14:30', '14:45', '15:30', '16:00', '17:15', '18:30', '19:45', '20:15', '21:00',
+            '06:00', '07:00', '08:15', '09:30', '10:45', '11:30', '12:15', '13:30',
+            '14:30', '16:00', '17:15', '18:30', '19:45', '20:15', '21:00',
             '22:15', '22:45',
         ];
-        $saturdayHours = [
-            '09:00', '10:30', '11:30', '12:00', '13:30', '15:00',
-            '15:30', '16:30', '18:00', '19:30', '20:30', '22:00',
-        ];
-        $sundayHours = [
-            '09:30', '10:45', '12:00', '13:30', '15:00',
-            '16:30', '18:00', '19:30', '21:00', '22:00',
-        ];
 
-        $scheduleByDay = [
+        return [
+            0 => $weekdaysHours,
             1 => $weekdaysHours,
             2 => $weekdaysHours,
             3 => $weekdaysHours,
             4 => $weekdaysHours,
-            5 => $weekdaysHours,
-            6 => $saturdayHours,
-            7 => $sundayHours,
+            5 => [
+                '09:00', '10:30', '12:00', '13:30', '15:00',
+                '16:30', '18:00', '19:30', '20:30', '22:00',
+            ],
+            6 => [
+                '09:30', '10:45', '12:00', '13:30', '15:00',
+                '16:30', '18:00', '19:30', '21:00', '22:00',
+            ],
         ];
+    }
 
-        return in_array($time, $scheduleByDay[$dayOfWeek] ?? [], true);
+    /**
+     * @return array<int, list<string>>
+     */
+    private function scheduleByDayIso(): array
+    {
+        $zeroBased = $this->scheduleByDayZeroBased();
+
+        return [
+            1 => $zeroBased[0],
+            2 => $zeroBased[1],
+            3 => $zeroBased[2],
+            4 => $zeroBased[3],
+            5 => $zeroBased[4],
+            6 => $zeroBased[5],
+            7 => $zeroBased[6],
+        ];
     }
 
     private function isPastDateTime(string $date, string $time): bool

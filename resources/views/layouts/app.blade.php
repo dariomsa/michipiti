@@ -486,6 +486,7 @@
         ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => $listadoUrl],
         ['label' => 'Pauta', 'icon' => 'bi-calendar-week', 'url' => route('pauta.index')],
         ['label' => 'Planificador', 'icon' => 'bi-calendar3', 'url' => route('planificador')],
+        ['label' => 'Horarios', 'icon' => 'bi-clock-history', 'url' => route('planificador.horarios')],
     ]));
 @endphp
 

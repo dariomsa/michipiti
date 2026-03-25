@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/pauta/items', [PautaController::class, 'items'])->name('pauta.items');
     Route::post('/pauta/{id}/programar', [PautaController::class, 'programar'])->name('pauta.programar');
     Route::get('/planificador', [PlanificadorController::class, 'index'])->name('planificador');
+    Route::get('/planificador/horarios', [PlanificadorController::class, 'horarios'])->name('planificador.horarios');
     Route::get('/planificador/week', [PlanificadorController::class, 'week']);
     Route::get('/planificador/periodistas', [PlanificadorController::class, 'periodistas']);
     Route::post('/planificador/store', [PlanificadorController::class, 'store']);

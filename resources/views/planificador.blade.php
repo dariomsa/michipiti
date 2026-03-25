@@ -596,14 +596,14 @@
   const dayNames = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 
   const weekdaysHours = [
-    '06:00','07:00','08:15','09:30','10:45','11:30','12:15','12:30','12:45','13:00','13:15','13:30',
-    '13:45','14:00','14:15','14:30','14:45','15:30','16:00','17:15','18:30','19:45','20:15','21:00',
+    '06:00','07:00','08:15','09:30','10:45','11:30','12:15','13:30',
+    '14:30','16:00','17:15','18:30','19:45','20:15','21:00',
     '22:15','22:45'
   ];
 
   const saturdayHours = [
-    '09:00','10:30','11:30','12:00','13:30','15:00',
-    '15:30','16:30','18:00','19:30','20:30','22:00'
+    '09:00','10:30','12:00','13:30','15:00',
+    '16:30','18:00','19:30','20:30','22:00'
   ];
 
   const sundayHours = [
@@ -716,10 +716,7 @@
   }
 
   function isPastSlot(dayIndex, hour){
-    const fecha = fmtISODate(addDays(weekStart, dayIndex));
-    const slotDate = new Date(`${fecha}T${hour}:00`);
-
-    return slotDate.getTime() < Date.now();
+    return false;
   }
 
   function calendarDayIndexFromDate(dateStr){
@@ -814,14 +811,6 @@
     `;
   }
 
-  function buildHeaderClosedHTML(){
-    return `
-      <div class="day-head-stats">
-        <span class="mini-stat text-muted">Cerrado</span>
-      </div>
-    `;
-  }
-
   function renderHeaders(){
     for(let i = 0; i < 7; i++){
       const d = addDays(weekStart, i);
@@ -842,7 +831,8 @@
 
   function updateHeaderCounters(){
     for(let dayIndex = 0; dayIndex < 7; dayIndex++){
-      const fecha = fmtISODate(addDays(weekStart, dayIndex));
+      const currentDate = addDays(weekStart, dayIndex);
+      const fecha = fmtISODate(currentDate);
       const allowedHours = scheduleByDay[dayIndex] || [];
 
       let occupied = 0;
@@ -866,12 +856,11 @@
 
       const th = document.getElementById(`h${dayIndex}`);
       if(th){
-        const currentDate = addDays(weekStart, dayIndex);
         const todayClass = isTodayDate(currentDate) ? ' day-head-today' : '';
         th.innerHTML = `
           <div class="day-head${todayClass}">
             <div class="day-head-title">${fmtHeader(currentDate, dayNames[dayIndex])}</div>
-            ${futureSlots > 0 ? buildHeaderStatHTML(available, occupied) : buildHeaderClosedHTML()}
+            ${buildHeaderStatHTML(available, occupied)}
           </div>
         `;
       }
