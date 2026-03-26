@@ -72,38 +72,48 @@
 
 @section('content')
 @php
-  $legacyWeekdaysHours = [
-    '06:00', '07:00', '08:15', '09:30', '10:45', '11:30', '12:15', '12:30', '12:45',
-    '13:00', '13:15', '13:30', '13:45', '14:00', '14:15', '14:30', '14:45', '15:30',
-    '16:00', '17:15', '18:30', '19:45', '20:15', '21:00', '22:15', '22:45',
+  $availableWeekdaysHours = [
+    '06:00', '07:00', '08:15', '09:30', '10:45', '11:30', '12:15', '13:30',
+    '14:45', '15:30', '16:00', '17:15', '18:30', '19:45', '20:15', '21:00',
+    '22:15', '22:45',
   ];
 
-  $legacySaturdayHours = [
-    '09:00', '10:30', '11:30', '12:00', '13:30', '15:00',
-    '15:30', '16:30', '18:00', '19:30', '20:30', '22:00',
+  $availableSaturdayHours = [
+    '09:00', '10:30', '12:00', '13:30', '15:00',
+    '16:30', '18:00', '19:30', '20:30', '22:00',
   ];
 
-  $legacySundayHours = [
+  $availableSundayHours = [
     '09:30', '10:45', '12:00', '13:30', '15:00',
     '16:30', '18:00', '19:30', '21:00', '22:00',
   ];
 
-  $legacySchedule = [
-    0 => $legacyWeekdaysHours,
-    1 => $legacyWeekdaysHours,
-    2 => $legacyWeekdaysHours,
-    3 => $legacyWeekdaysHours,
-    4 => $legacyWeekdaysHours,
-    5 => $legacySaturdayHours,
-    6 => $legacySundayHours,
+  $availableSchedule = [
+    0 => $availableWeekdaysHours,
+    1 => $availableWeekdaysHours,
+    2 => $availableWeekdaysHours,
+    3 => $availableWeekdaysHours,
+    4 => $availableWeekdaysHours,
+    5 => $availableSaturdayHours,
+    6 => $availableSundayHours,
   ];
 
-  $legacyAllHours = collect($legacySchedule)
+  $availableSundayLabels = [
+    '09:30' => 'Softnews',
+    '10:45' => 'Reel',
+    '12:00' => 'Deportes',
+    '13:30' => 'Noticias del dia',
+    '15:00' => 'Reel',
+    '16:30' => 'Carrusel premium',
+    '18:00' => 'Tendencias',
+    '19:30' => 'Deportes',
+    '21:00' => 'Reel',
+    '22:00' => 'Tendencias',
+  ];
+
+  $availableAllHours = collect($availableSchedule)
       ->flatten()
       ->unique()
-      ->reject(fn ($hour) => in_array($hour, [
-          '12:30', '12:45', '13:00', '13:15', '13:45', '14:00', '14:15', '14:45', '15:30',
-      ], true))
       ->sort()
       ->values();
 @endphp
@@ -127,16 +137,19 @@
           </tr>
         </thead>
         <tbody>
-          @foreach($legacyAllHours as $hour)
+          @foreach($availableAllHours as $hour)
             <tr>
               <td class="schedule-hour">{{ $hour }}</td>
               @foreach($dayNames as $index => $dayName)
                 @php
-                  $isInCurrentSchedule = in_array($hour, $schedule[$index] ?? [], true);
-                  $slotClass = $isInCurrentSchedule ? 'schedule-slot-active' : 'schedule-slot-outside';
-                  $slotLabel = $isInCurrentSchedule ? 'Permite pauta' : 'Fuera de pauta';
+                  $isAvailable = in_array($hour, $availableSchedule[$index] ?? [], true);
+                  $slotClass = $isAvailable ? 'schedule-slot-active' : 'schedule-slot-outside';
+                  $slotLabel = $isAvailable ? 'Permitido' : 'Fuera de pauta';
+                  $slotTitle = $index === 6 && $isAvailable && isset($availableSundayLabels[$hour])
+                      ? 'Domingo: '.$availableSundayLabels[$hour]
+                      : '';
                 @endphp
-                <td class="{{ $slotClass }}">
+                <td class="{{ $slotClass }}" title="{{ $slotTitle }}">
                   {{ $slotLabel }}
                 </td>
               @endforeach
@@ -148,7 +161,7 @@
   </div>
 
   <div class="mt-3 d-flex flex-wrap gap-3 schedule-note">
-    <span><span class="badge" style="background:#dcfce7;color:#166534;">Permite pauta</span></span>
+    <span><span class="badge" style="background:#dcfce7;color:#166534;">Permitido</span></span>
     <span><span class="badge" style="background:#dbeafe;color:#1d4ed8;">Fuera de pauta</span></span>
   </div>
 </section>
