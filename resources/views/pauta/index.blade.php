@@ -44,8 +44,13 @@
   .hora-link{ color:#0d6efd; text-decoration:none; font-weight:800; }
   .hora-link:hover{ text-decoration:underline; }
   .estado-dot{ width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
-  .estado-aprobado{ background:#39b54a; }
-  .estado-revision{ background:#ffbf00; }
+  .estado-aprobado{ background:#2e7d32; }
+  .estado-revision{ background:#f9a825; }
+  .estado-diseno{ background:#2563eb; }
+  .estado-borrador{ background:#9e9e9e; }
+  .estado-devuelto{ background:#ef6c00; }
+  .estado-rechazado{ background:#c62828; }
+  .estado-publicado{ background:#1565c0; }
   .estado-pendiente{ background:#6c757d; }
   .toolbar{
     display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
@@ -482,6 +487,11 @@
     const e = String(estado || '').toUpperCase();
     if (e === 'APROBADO') return 'estado-dot estado-aprobado';
     if (e === 'EN_REVISION' || e === 'REVISION') return 'estado-dot estado-revision';
+    if (e === 'EN_DISENO') return 'estado-dot estado-diseno';
+    if (e === 'BORRADOR') return 'estado-dot estado-borrador';
+    if (e === 'DEVUELTO') return 'estado-dot estado-devuelto';
+    if (e === 'RECHAZADO') return 'estado-dot estado-rechazado';
+    if (e === 'PUBLICADO') return 'estado-dot estado-publicado';
     return 'estado-dot estado-pendiente';
   }
 
