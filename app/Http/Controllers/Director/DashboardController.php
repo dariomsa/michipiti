@@ -91,7 +91,7 @@ class DashboardController extends Controller
             ->when(
                 $tipoProductoId,
                 fn ($query) => $query->where('tipo_producto_id', $tipoProductoId),
-                fn ($query) => $query->whereHas('tipoProducto', fn ($tipoQuery) => $tipoQuery->where('slug', 'tipo_carrusel'))
+                fn ($query) => $query->whereHas('tipoProducto', fn ($tipoQuery) => $tipoQuery->where('slug', 'carrusel'))
             )
             ->when(
                 $seccionesSeleccionadas !== [],

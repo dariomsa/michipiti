@@ -11,7 +11,7 @@ class TipoProducto extends Model
 {
     use HasFactory;
 
-    public const SLUG_CARRUSEL = 'tipo_carrusel';
+    public const SLUG_CARRUSEL = 'carrusel';
 
     protected $table = 'tipo_productos';
 

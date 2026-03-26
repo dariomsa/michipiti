@@ -504,7 +504,7 @@ class PlanificadorController extends Controller
             ->first();
 
         if (! $tipoProducto) {
-            throw new HttpException(422, 'No existe el tipo de producto tipo_carrusel configurado para el planificador.');
+            throw new HttpException(422, 'No existe el tipo de producto carrusel configurado para el planificador.');
         }
 
         return $tipoProducto->id;
