@@ -483,7 +483,7 @@
 
   <div class="mt-3 d-flex flex-wrap gap-3 small text-muted">
     <span><span class="legend-dot" style="background:#dcfce7;border:1px solid #15803d;"></span>Aprobado / Finalizado</span>
-    <span><span class="legend-dot" style="background:#ffedd5;border:1px solid #fb923c;"></span>Pendiente</span>
+    <span><span class="legend-dot" style="background:#fb493c;border:1px solid #fb493c;"></span>Pendiente</span>
     <span><span class="legend-dot" style="background:#fef3c7;border:1px solid #f59e0b;"></span>En Proceso</span>
     <span><span class="legend-dot" style="background:#dbeafe;border:1px solid #93c5fd;"></span>Horario fuera de pauta editable</span>
   </div>

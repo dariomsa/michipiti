@@ -82,6 +82,17 @@
     z-index: 1030;
   }
 
+  .laminas-bottom-action {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 28%);
+    bottom: .75rem;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -3.25rem;
+    padding: 3.5rem .25rem .25rem;
+    position: sticky;
+    z-index: 1020;
+  }
+
   .preview-media-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
@@ -211,6 +222,8 @@
       font-size: .78rem;
       padding: .4rem .6rem;
     }
+
+    .laminas-bottom-action { bottom: .5rem; }
   }
 </style>
 @endpush
@@ -338,7 +351,7 @@
               <div class="laminas-toolbar mb-2">
                 <div class="fw-bold">Láminas</div>
                 @unless($readOnly)
-                  <button type="button" class="btn btn-dark btn-sm rounded-0" id="btnAddLamina">
+                  <button type="button" class="btn btn-dark btn-sm rounded-0" data-add-lamina>
                     <i class="bi bi-plus-lg"></i> Agregar lámina
                   </button>
                 @endunless
@@ -352,6 +365,16 @@
                   ])
                 @endforeach
               </div>
+
+              @unless($readOnly)
+                <div class="laminas-bottom-action">
+                  <button type="button"
+                          class="btn btn-dark btn-sm rounded-0"
+                          data-add-lamina>
+                    <i class="bi bi-plus-lg"></i> Agregar lámina
+                  </button>
+                </div>
+              @endunless
             @else
               <div class="muted-box mb-3">
                 Este producto no usa láminas porque su tipo no es carrusel.
@@ -577,7 +600,7 @@
 (() => {
   const formMain = document.getElementById('formMain');
   const laminasWrap = document.getElementById('laminasWrap');
-  const btnAddLamina = document.getElementById('btnAddLamina');
+  const btnAddLaminaList = Array.from(document.querySelectorAll('[data-add-lamina]'));
   const btnGuardar = document.getElementById('btnGuardar');
   const btnEnviarRevision = document.getElementById('btnEnviarRevision');
   const btnFinalizar = document.getElementById('btnFinalizarSinRevision');
@@ -994,15 +1017,15 @@
     submitMainForm();
   }
 
-  if (btnAddLamina && laminasWrap) {
-    btnAddLamina.addEventListener('click', () => {
+  if (btnAddLaminaList.length > 0 && laminasWrap) {
+    btnAddLaminaList.forEach((button) => button.addEventListener('click', () => {
       const index = qa('[data-lamina]', laminasWrap).length;
       const wrapper = document.createElement('div');
       wrapper.innerHTML = newLaminaHtml(index);
       const box = wrapper.firstElementChild;
       laminasWrap.appendChild(box);
       initLaminaBox(box);
-    });
+    }));
   }
 
   document.addEventListener('click', (event) => {
