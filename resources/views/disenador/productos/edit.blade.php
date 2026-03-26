@@ -671,6 +671,11 @@
     }, 1200);
   }
 
+  function submitMainForm() {
+    window.showBlockingLoader?.('Guardando cambios...');
+    formMain.submit();
+  }
+
   document.addEventListener('click', async (event) => {
     const button = event.target.closest('.js-copy-btn, .js-copy-text');
     if (!button) return;
@@ -692,7 +697,7 @@
 
   btnGuardar?.addEventListener('click', () => {
     accionHidden.value = 'guardar';
-    formMain.submit();
+    submitMainForm();
   });
 
   btnFinalizar?.addEventListener('click', () => {
@@ -716,7 +721,7 @@
     canvaUrlInput?.classList.remove('is-invalid');
     canvaUrlHidden.value = value;
     accionHidden.value = 'finalizar';
-    formMain.submit();
+    submitMainForm();
   });
 
   canvaUrlInput?.addEventListener('input', () => canvaUrlInput.classList.remove('is-invalid'));

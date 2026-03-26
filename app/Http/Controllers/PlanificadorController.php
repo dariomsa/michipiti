@@ -82,7 +82,7 @@ class PlanificadorController extends Controller
     {
         $users = User::query()
             ->select('id', 'name')
-            ->whereHas('roles', fn ($query) => $query->where('name', 'periodista'))
+            ->whereHas('roles')
             ->orderBy('name')
             ->get();
 

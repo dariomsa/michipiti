@@ -656,6 +656,38 @@
                 min-width: 2.55rem;
             }
         }
+
+        .blocking-loader {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(28, 25, 23, 0.28);
+            backdrop-filter: blur(1.5px);
+            z-index: 2000;
+        }
+
+        .blocking-loader.is-visible {
+            display: flex;
+        }
+
+        .blocking-loader-card {
+            min-width: 220px;
+            padding: 1rem 1.25rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(231, 229, 228, 0.95);
+            box-shadow: 0 18px 40px rgba(28, 25, 23, 0.14);
+            text-align: center;
+        }
+
+        .blocking-loader-text {
+            margin-top: 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--ec-text);
+        }
     </style>
 
     @stack('styles')
@@ -883,6 +915,33 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<div class="blocking-loader" id="blockingLoader" aria-hidden="true">
+    <div class="blocking-loader-card" role="status" aria-live="polite">
+        <div class="spinner-border text-primary" aria-hidden="true"></div>
+        <div class="blocking-loader-text" id="blockingLoaderText">Procesando...</div>
+    </div>
+</div>
+<script>
+window.showBlockingLoader = function (message) {
+    const loader = document.getElementById('blockingLoader');
+    const text = document.getElementById('blockingLoaderText');
+
+    if (!loader || !text) return;
+
+    text.textContent = message || 'Procesando...';
+    loader.classList.add('is-visible');
+    loader.setAttribute('aria-hidden', 'false');
+};
+
+window.hideBlockingLoader = function () {
+    const loader = document.getElementById('blockingLoader');
+
+    if (!loader) return;
+
+    loader.classList.remove('is-visible');
+    loader.setAttribute('aria-hidden', 'true');
+};
+</script>
 
 @stack('scripts')
 </body>

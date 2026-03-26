@@ -949,10 +949,39 @@
     return true;
   }
 
+  function validateUploadPayloadSize() {
+    if (!formMain) return false;
+
+    const maxTotalBytes = 30 * 1024 * 1024;
+    let totalBytes = 0;
+
+    qa('input[type="file"]', formMain).forEach((input) => {
+      Array.from(input.files || []).forEach((file) => {
+        totalBytes += file.size || 0;
+      });
+    });
+
+    if (totalBytes <= maxTotalBytes) {
+      return true;
+    }
+
+    window.alert('Los archivos seleccionados superan el limite total de 30 MB por solicitud.');
+    return false;
+  }
+
+  function submitMainForm() {
+    window.showBlockingLoader?.('Guardando cambios...');
+    formMain.submit();
+  }
+
   function submitWithAction(action) {
     if (!formMain) return;
 
     if (!ensureBootstrapValidation()) {
+      return;
+    }
+
+    if (!validateUploadPayloadSize()) {
       return;
     }
 
@@ -962,7 +991,7 @@
     }
 
     accionHidden.value = action;
-    formMain.submit();
+    submitMainForm();
   }
 
   if (btnAddLamina && laminasWrap) {
@@ -1059,6 +1088,10 @@
         return;
       }
 
+      if (!validateUploadPayloadSize()) {
+        return;
+      }
+
       const motivo = motivoDevolucion ? motivoDevolucion.value.trim() : '';
 
       if (!motivo) {
@@ -1070,7 +1103,7 @@
 
       motivoHidden.value = motivo;
       accionHidden.value = 'devolver_periodista';
-      formMain.submit();
+      submitMainForm();
     });
   }
 
@@ -1087,9 +1120,13 @@
         return;
       }
 
+      if (!validateUploadPayloadSize()) {
+        return;
+      }
+
       canvaUrlHidden.value = value;
       accionHidden.value = 'finalizar';
-      formMain.submit();
+      submitMainForm();
     });
   }
 
@@ -1097,7 +1134,7 @@
     formMain.addEventListener('submit', (event) => {
       formMain.classList.add('was-validated');
 
-      if (!formMain.checkValidity() || !accionHidden.value) {
+      if (!formMain.checkValidity() || !accionHidden.value || !validateUploadPayloadSize()) {
         event.preventDefault();
         event.stopPropagation();
       }
