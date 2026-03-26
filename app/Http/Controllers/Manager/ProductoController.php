@@ -34,6 +34,7 @@ class ProductoController extends BaseProductoController
             'mensajes' => $producto->mensajes()->with('autor:id,name')->orderBy('id')->get(),
             'disenadores' => User::query()
                 ->whereHas('roles', fn ($query) => $query->whereIn('name', ['disenador', 'disenador_manager']))
+                ->where('email', 'not like', '%@demo.com')
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'routeBase' => 'manager.productos',
