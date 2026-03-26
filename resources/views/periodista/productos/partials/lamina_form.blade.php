@@ -43,11 +43,11 @@
               rows="2"
               name="laminas[{{ $index }}][descripcion]"
               placeholder="Descripción breve"
-              maxlength="600"
+              maxlength="150"
               required>{{ old("laminas.$index.descripcion", $descripcion) }}</textarea>
 
     <div class="text-end count-small">
-      <span class="jsCount">{{ strlen(old("laminas.$index.descripcion", $descripcion)) }}</span> / 600
+      <span class="jsCount">{{ strlen(old("laminas.$index.descripcion", $descripcion)) }}</span> / 150
     </div>
   </div>
 

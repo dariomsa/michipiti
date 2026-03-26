@@ -7,6 +7,7 @@ use App\Models\Producto;
 use App\Models\Seccion;
 use App\Models\TipoProducto;
 use App\Models\User;
+use App\Services\Carrusel\CarruselSlackNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -196,6 +197,28 @@ class PlanificadorController extends Controller
             ],
         );
 
+        if ($isNew && ! $isAllowedSchedule) {
+            $directorIds = User::role('director')
+                ->pluck('id')
+                ->map(fn ($value) => (int) $value)
+                ->toArray();
+
+            if ($directorIds !== []) {
+                $texto =
+                    "────────────────────────\n".
+                    app(CarruselSlackNotifier::class)->formatHeader($producto)."\n".
+                    "⚠️ Por aprobar fuera de pauta\n".
+                    "Horario: {$data['fecha']} {$data['hora']}\n".
+                    "────────────────────────\n";
+
+                app(CarruselSlackNotifier::class)->notifyUsersByIds(
+                    $directorIds,
+                    $texto,
+                    (int) $request->user()->id,
+                );
+            }
+        }
+
         return response()->json([
             'ok' => true,
             'item' => $this->serializeProducto($producto, $request->user()),
@@ -269,16 +292,32 @@ class PlanificadorController extends Controller
         $sourceOriginalDate = optional($source->fecha)->format('Y-m-d');
         $sourceOriginalTime = $source->hora ? Carbon::parse($source->hora)->format('H:i') : null;
         $sourceEstadoAnterior = $source->estado;
+        $sourceCanMoveToTarget = $this->isAllowedSchedule($targetDate, $targetTime) || $source->origen === 'pauta';
 
         $target = Producto::query()
             ->whereDate('fecha', $targetDate)
             ->whereTime('hora', $targetTime)
             ->first();
 
+        if (! $sourceCanMoveToTarget) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Solo los productos que ya están en pauta pueden moverse a horarios fuera de pauta.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         if ($target) {
             $targetOriginalDate = optional($target->fecha)->format('Y-m-d');
             $targetOriginalTime = $target->hora ? Carbon::parse($target->hora)->format('H:i') : null;
             $targetEstadoAnterior = $target->estado;
+            $targetCanMoveToSource = $this->isAllowedSchedule($sourceOriginalDate, $sourceOriginalTime) || $target->origen === 'pauta';
+
+            if (! $targetCanMoveToSource) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'El intercambio no es válido porque uno de los productos quedaría fuera de pauta sin estar en pauta.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
 
             $source->update([
                 'fecha' => $targetDate,

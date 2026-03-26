@@ -135,7 +135,7 @@ class ProductoController extends Controller
             'laminas' => [$producto->esCarrusel() ? 'required' : 'nullable', 'array', 'min:1'],
             'laminas.*.id' => ['nullable', 'integer'],
             'laminas.*.titulo' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string', 'max:200'],
-            'laminas.*.descripcion' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string', 'max:600'],
+            'laminas.*.descripcion' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string', 'max:180'],
             'laminas.*.archivos' => ['nullable', 'array'],
             'laminas.*.archivos.*' => ['nullable', 'file', 'max:30720'],
             'laminas.*.delete_archivos' => ['nullable', 'array'],
@@ -267,7 +267,7 @@ class ProductoController extends Controller
             'laminas' => ['nullable', 'array'],
             'laminas.*.id' => ['nullable', 'integer'],
             'laminas.*.titulo' => ['nullable', 'string', 'max:200'],
-            'laminas.*.descripcion' => ['nullable', 'string', 'max:600'],
+            'laminas.*.descripcion' => ['nullable', 'string', 'max:180'],
         ]);
 
         $producto->fill([

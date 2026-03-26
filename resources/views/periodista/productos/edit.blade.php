@@ -839,9 +839,9 @@
                     rows="2"
                     name="laminas[${index}][descripcion]"
                     placeholder="Descripción breve"
-                    maxlength="600"
+                    maxlength="150"
                     required></textarea>
-          <div class="text-end count-small"><span class="jsCount">0</span> / 600</div>
+          <div class="text-end count-small"><span class="jsCount">0</span> / 150</div>
         </div>
 
         <div class="mb-2">

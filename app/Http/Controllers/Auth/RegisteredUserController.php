@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use App\Support\RoleCatalog;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -45,8 +46,12 @@ class RegisteredUserController extends Controller
         return route('dashboard');
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        abort_unless($request->hasValidSignature(), 403);
+
+        $request->session()->put('register_via_signed_url', true);
+
         return view('auth.register', [
             'roles' => RoleCatalog::labels(),
         ]);
@@ -54,6 +59,8 @@ class RegisteredUserController extends Controller
 
     public function store(RegisterRequest $request): RedirectResponse
     {
+        abort_unless($request->session()->pull('register_via_signed_url', false), 403);
+
         $user = DB::transaction(function () use ($request): User {
             $data = $request->validated();
 

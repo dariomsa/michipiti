@@ -376,6 +376,20 @@
     cursor: not-allowed !important;
   }
 
+  .planner-drag-overlay{
+    background: rgba(15, 23, 42, 0.34);
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 140ms ease;
+    z-index: 1025;
+  }
+
+  .planner-drag-overlay.is-visible{
+    opacity: 1;
+  }
+
   @media (max-width: 1400px){
     :root{
       --day-col-w: 220px;
@@ -488,6 +502,8 @@
     <span><span class="legend-dot" style="background:#dbeafe;border:1px solid #93c5fd;"></span>Horario fuera de pauta editable</span>
   </div>
 </div>
+
+<div class="planner-drag-overlay" id="plannerDragOverlay" aria-hidden="true"></div>
 
 <div class="modal fade" id="slotModal" tabindex="-1" aria-labelledby="slotModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -660,11 +676,15 @@
   const btnToday = document.getElementById('btnToday');
   const rangeLabel = document.getElementById('rangeLabel');
   const searchInput = document.getElementById('searchInput');
+  const plannerDragOverlay = document.getElementById('plannerDragOverlay');
+  const AUTO_REFRESH_MS = 15000;
 
   let weekStart = startOfWeekMonday(new Date());
   const slotData = {};
   let dragSource = null;
   let isDragging = false;
+  let lastWeekSignature = '';
+  let autoRefreshTimer = null;
 
   function startOfWeekMonday(date){
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -709,6 +729,23 @@
 
   function slotKey(fecha, hora){
     return `${fecha}|${hora}`;
+  }
+
+  function buildWeekSignature(items){
+    return JSON.stringify(
+      (items || []).map(item => [
+        Number(item.id || 0),
+        item.fecha || '',
+        (item.hora || '').slice(0, 5),
+        item.estado || '',
+        item.origen || '',
+        item.updated_at || '',
+      ])
+    );
+  }
+
+  function isModalOpen(){
+    return !!slotModalEl?.classList.contains('show');
   }
 
   function isAllowedHour(dayIndex, hour){
@@ -922,6 +959,11 @@
     });
   }
 
+  function setDragOverlayVisible(visible){
+    if(!plannerDragOverlay) return;
+    plannerDragOverlay.classList.toggle('is-visible', visible);
+  }
+
   function getSlotFromCell(td){
     if(!td) return null;
 
@@ -947,12 +989,23 @@
     return !!item.id;
   }
 
+  function canMoveItemToSlot(item, slot){
+    if(!item || !slot) return false;
+    if(slot.td?.dataset.past === '1') return false;
+
+    const origen = String(item.origen || '').toLowerCase();
+    return slot.allowed === true || origen === 'pauta';
+  }
+
   function canDropOnTarget(source, target){
     if(!source || !source.item || !source.item.id) return false;
     if(!target || !target.key) return false;
     if(source.key === target.key) return false;
-    if(target.allowed !== true) return false;
-    if(target.td?.dataset.past === '1') return false;
+
+    if(!canMoveItemToSlot(source.item, target)) return false;
+
+    if(target.item && !canMoveItemToSlot(target.item, source)) return false;
+
     return true;
   }
 
@@ -1034,6 +1087,7 @@
         dragSource = getSlotFromCell(td);
         isDragging = true;
         td.classList.add('slot-dragging');
+        setDragOverlayVisible(true);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', dragSource.key);
       };
@@ -1122,12 +1176,14 @@
           if(!dragSource || !target || !target.key){
             dragSource = null;
             isDragging = false;
+            setDragOverlayVisible(false);
             return;
           }
 
           if(!canDropOnTarget(dragSource, target)){
             dragSource = null;
             isDragging = false;
+            setDragOverlayVisible(false);
             return;
           }
 
@@ -1140,6 +1196,7 @@
             dragSource = null;
             isDragging = false;
             clearDropStates();
+            setDragOverlayVisible(false);
           }
         });
 
@@ -1192,10 +1249,11 @@
   }
 
   async function loadWeek(){
-    Object.keys(slotData).forEach(key => delete slotData[key]);
-
     const start = fmtISODate(weekStart);
     const items = await fetchJSON(`/planificador/week?week_start=${encodeURIComponent(start)}`);
+    lastWeekSignature = buildWeekSignature(items);
+
+    Object.keys(slotData).forEach(key => delete slotData[key]);
 
     items.forEach(item => {
       const hora = (item.hora || '').slice(0, 5);
@@ -1214,6 +1272,54 @@
 
     updateHeaderCounters();
     applySearchFilter();
+  }
+
+  async function syncWeekSilently(){
+    if(isDragging || isModalOpen() || document.hidden){
+      return;
+    }
+
+    const start = fmtISODate(weekStart);
+    const items = await fetchJSON(`/planificador/week?week_start=${encodeURIComponent(start)}`);
+    const nextSignature = buildWeekSignature(items);
+
+    if(nextSignature === lastWeekSignature){
+      return;
+    }
+
+    lastWeekSignature = nextSignature;
+
+    Object.keys(slotData).forEach(key => delete slotData[key]);
+
+    items.forEach(item => {
+      const hora = (item.hora || '').slice(0, 5);
+      slotData[slotKey(item.fecha, hora)] = { ...item, hora };
+    });
+
+    document.querySelectorAll('.slot').forEach(td => {
+      const dayIndex = Number(td.dataset.day);
+      const hour = td.dataset.hour;
+      const fecha = fmtISODate(addDays(weekStart, dayIndex));
+      const key = slotKey(fecha, hour);
+
+      td.dataset.key = key;
+      renderCellContent(td, slotData[key]);
+    });
+
+    updateHeaderCounters();
+    applySearchFilter();
+  }
+
+  function startAutoRefresh(){
+    if(autoRefreshTimer){
+      clearInterval(autoRefreshTimer);
+    }
+
+    autoRefreshTimer = setInterval(() => {
+      syncWeekSilently().catch((error) => {
+        console.error('planificador_auto_refresh', error);
+      });
+    }, AUTO_REFRESH_MS);
   }
 
   function setFormEditable(mode = 'full'){
@@ -1364,7 +1470,7 @@
     if(!source?.item || !source.item.id) return;
     if(source.key === target.key) return;
 
-    if(target.allowed !== true){
+    if(!canDropOnTarget(source, target)){
       return;
     }
 
@@ -1624,6 +1730,7 @@
     buildGrid();
     await loadPeriodistas();
     await loadWeek();
+    startAutoRefresh();
   })();
 </script>
 @endpush
