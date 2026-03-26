@@ -671,7 +671,7 @@ class ProductoController extends Controller
     protected function periodistasDisponibles(?User $user): Collection
     {
         $query = User::query()
-            ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('name', 'periodista'))
+            ->whereHas('roles', fn ($roleQuery) => $roleQuery->whereIn('name', ['periodista', 'editor']))
             ->orderBy('name');
 
         if (! $this->puedeVerTodosLosProductos($user) && $user) {
