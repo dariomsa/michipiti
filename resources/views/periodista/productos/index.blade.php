@@ -223,9 +223,9 @@
 
                 <td style="padding:16px;">
                   <div style="line-height:1.15;">
-                    <div>{{ optional($producto->created_at)->format('d/m/Y') }}</div>
+                    <div>{{ $producto->fecha ? $producto->fecha->format('d/m/Y') : '-' }}</div>
                     <div class="text-muted" style="font-size:.85rem;">
-                      {{ optional($producto->created_at)->format('H:i') }}
+                      {{ $producto->hora ? \Illuminate\Support\Str::substr((string) $producto->hora, 0, 5) : '-' }}
                     </div>
                   </div>
                 </td>

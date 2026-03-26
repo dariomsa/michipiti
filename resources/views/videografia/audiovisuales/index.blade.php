@@ -223,9 +223,9 @@
 
                 <td style="padding:16px;">
                   <div style="line-height:1.15;">
-                    <div>{{ optional($audiovisual->created_at)->format('d/m/Y') }}</div>
+                    <div>{{ $audiovisual->fecha ? $audiovisual->fecha->format('d/m/Y') : '-' }}</div>
                     <div class="text-muted" style="font-size:.85rem;">
-                      {{ optional($audiovisual->created_at)->format('H:i') }}
+                      {{ $audiovisual->hora ? \Illuminate\Support\Str::substr((string) $audiovisual->hora, 0, 5) : '-' }}
                     </div>
                   </div>
                 </td>
