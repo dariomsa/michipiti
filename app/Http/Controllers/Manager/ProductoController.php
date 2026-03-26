@@ -33,7 +33,7 @@ class ProductoController extends BaseProductoController
             'movimientos' => $producto->movimientos,
             'mensajes' => $producto->mensajes()->with('autor:id,name')->orderBy('id')->get(),
             'disenadores' => User::query()
-                ->whereHas('roles', fn ($query) => $query->where('name', 'disenador'))
+                ->whereHas('roles', fn ($query) => $query->whereIn('name', ['disenador', 'disenador_manager']))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'routeBase' => 'manager.productos',
