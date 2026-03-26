@@ -265,8 +265,10 @@
         <div class="card-body">
           <form method="POST"
                 id="formMain"
+                class="needs-validation"
                 action="{{ route($routeBase.'.update', $producto) }}"
-                enctype="multipart/form-data">
+                enctype="multipart/form-data"
+                novalidate>
             @csrf
             @method('PUT')
             <fieldset @disabled($readOnly)>
@@ -362,7 +364,11 @@
                         id="copyInput"
                         class="form-control rounded-0"
                         rows="4"
+                        required
                         placeholder="Escribir el copy">{{ old('copy', $producto->copy) }}</textarea>
+              <div class="invalid-feedback">
+                El copy es obligatorio.
+              </div>
             </div>
 
             <div class="mb-3">
@@ -373,6 +379,9 @@
                      placeholder="#hashtags sugeridos"
                      required
                      value="{{ old('hashtags', $producto->hashtags) }}">
+              <div class="invalid-feedback">
+                Los hashtags son obligatorios.
+              </div>
             </div>
 
             <div class="mb-3">
@@ -631,8 +640,9 @@
       || /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(name);
   }
 
-  function buildMediaPreviewItem({ name, url, isImage }) {
+  function buildMediaPreviewItem({ name, url, isImage, label }) {
     const safeName = escapeHtml(name || 'Archivo');
+    const safeLabel = escapeHtml(label || name || 'Archivo');
     const safeUrl = escapeHtml(url || '#');
 
     return `
@@ -640,7 +650,7 @@
         ${isImage
           ? `<img class="preview-media-thumb" src="${safeUrl}" alt="${safeName}">`
           : `<div class="preview-media-file">Archivo</div>`}
-        <div class="preview-media-name" title="${safeName}">${safeName}</div>
+        <div class="preview-media-name" title="${safeLabel}">${safeLabel}</div>
       </a>
     `;
   }
@@ -652,6 +662,8 @@
       const items = [];
 
       qa('[data-lamina]', formMain || document).forEach((laminaBox) => {
+        const laminaTitle = q('[name$="[titulo]"]', laminaBox)?.value?.trim() || 'Lámina sin título';
+
         qa('.jsExistingArchivo', laminaBox).forEach((node) => {
           const archivoId = node.dataset.archivoId;
           const deleteCheckbox = archivoId
@@ -672,6 +684,7 @@
               name: file.name,
               url: URL.createObjectURL(file),
               isImage: isImageFile(file.name, file.type),
+              label: laminaTitle,
             }));
             return;
           }
@@ -681,6 +694,7 @@
             name: node.dataset.fileName || fileNameFromUrl(href),
             url: href,
             isImage: isImageFile(node.dataset.fileName || href),
+            label: laminaTitle,
           }));
         });
 
@@ -694,6 +708,7 @@
               name: file.name,
               url: URL.createObjectURL(file),
               isImage: isImageFile(file.name, file.type),
+              label: laminaTitle,
             }));
           });
         });
@@ -844,6 +859,9 @@
                  name="laminas[${index}][titulo]"
                  placeholder="Título de la lámina ${index + 1}"
                  required>
+          <div class="invalid-feedback">
+            El título de la lámina es obligatorio.
+          </div>
         </div>
 
         <div class="mb-2">
@@ -919,8 +937,24 @@
     }
   }
 
+  function ensureBootstrapValidation() {
+    if (!formMain) return false;
+    formMain.classList.add('was-validated');
+
+    if (!formMain.checkValidity()) {
+      formMain.reportValidity();
+      return false;
+    }
+
+    return true;
+  }
+
   function submitWithAction(action) {
     if (!formMain) return;
+
+    if (!ensureBootstrapValidation()) {
+      return;
+    }
 
     const errors = validateMainForm();
     if (errors.length > 0) {
@@ -994,6 +1028,10 @@
 
   if (btnFinalizar) {
     btnFinalizar.addEventListener('click', () => {
+      if (!ensureBootstrapValidation()) {
+        return;
+      }
+
       const errors = validateMainForm();
       if (errors.length > 0) {
         return;
@@ -1017,6 +1055,10 @@
 
   if (btnConfirmarDevolverPeriodista) {
     btnConfirmarDevolverPeriodista.addEventListener('click', () => {
+      if (!ensureBootstrapValidation()) {
+        return;
+      }
+
       const motivo = motivoDevolucion ? motivoDevolucion.value.trim() : '';
 
       if (!motivo) {
@@ -1053,8 +1095,11 @@
 
   if (formMain) {
     formMain.addEventListener('submit', (event) => {
-      if (!accionHidden.value) {
+      formMain.classList.add('was-validated');
+
+      if (!formMain.checkValidity() || !accionHidden.value) {
         event.preventDefault();
+        event.stopPropagation();
       }
     });
   }

@@ -33,6 +33,9 @@
            placeholder="Título de la lámina {{ $index + 1 }}"
            value="{{ old("laminas.$index.titulo", $titulo) }}"
            required>
+    <div class="invalid-feedback">
+      El título de la lámina es obligatorio.
+    </div>
   </div>
 
   <div class="mb-2">
