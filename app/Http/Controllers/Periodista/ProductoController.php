@@ -698,6 +698,7 @@ class ProductoController extends Controller
     protected function routeBaseFromRequest(Request $request): string
     {
         $routeName = (string) optional($request->route())->getName();
+        $user = $request->user();
 
         if (str_starts_with($routeName, 'editor.')) {
             return 'editor.productos';
@@ -713,6 +714,22 @@ class ProductoController extends Controller
 
         if (str_starts_with($routeName, 'manager.')) {
             return 'manager.productos';
+        }
+
+        if ($user?->hasRole('director')) {
+            return 'director.productos';
+        }
+
+        if ($user?->hasRole('editor')) {
+            return 'editor.productos';
+        }
+
+        if ($user?->hasRole('disenador_manager')) {
+            return 'manager.productos';
+        }
+
+        if ($user?->hasRole('disenador')) {
+            return 'disenador.productos';
         }
 
         return 'periodista.productos';
