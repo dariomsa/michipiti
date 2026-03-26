@@ -385,10 +385,8 @@ class ProductoController extends Controller
     protected function accionesDisponibles(): array
     {
         $producto = request()->route('producto');
-        $user = request()->user();
-        $revisionTarget = $user?->hasRole('editor')
-            && $producto instanceof Producto
-            && in_array($producto->estado, ['BORRADOR', 'EN_REVISION'], true)
+        $revisionTarget = $producto instanceof Producto
+            && $producto->estado === 'EN_REVISION'
             ? 'EN_DISENO'
             : 'EN_REVISION';
 

@@ -231,8 +231,7 @@
 @section('content')
 @php
   $laminasRows = old('laminas', $laminasData);
-  $isEditor = auth()->user()?->hasRole('editor');
-  $isRevisionEditableByEditor = $isEditor && in_array($producto->estado, ['BORRADOR', 'EN_REVISION'], true);
+  $editorRevisionLabel = $producto->estado === 'EN_REVISION' ? 'Enviar a diseño' : 'Enviar a revisión';
 @endphp
 
 <section class="flex-grow-1">
@@ -437,7 +436,7 @@
                 <button type="button"
                         class="btn btn-action-send rounded-0"
                         id="btnEnviarRevision">
-                  {{ $isRevisionEditableByEditor ? 'Enviar a diseño' : 'Enviar a revisión' }}
+                  {{ $editorRevisionLabel }}
                 </button>
 
                 <button type="button" class="btn btn-action-finalize rounded-0" id="btnFinalizarSinRevision">
