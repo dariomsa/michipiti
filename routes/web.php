@@ -79,6 +79,7 @@ Route::prefix('periodista')
     ->group(function (): void {
         Route::get('/productos', [PeriodistaProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [PeriodistaProductoController::class, 'create'])->name('productos.create');
+        Route::get('/productos/{producto}', fn ($producto) => redirect()->route('periodista.productos.edit', $producto))->name('productos.show');
         Route::get('/productos/{producto}/edit', [PeriodistaProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [PeriodistaProductoController::class, 'update'])->name('productos.update');
         Route::patch('/productos/{producto}/autosave', [PeriodistaProductoController::class, 'autosave'])->name('productos.autosave');
@@ -91,6 +92,7 @@ Route::prefix('editor')
     ->group(function (): void {
         Route::get('/productos', [EditorProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [EditorProductoController::class, 'create'])->name('productos.create');
+        Route::get('/productos/{producto}', fn ($producto) => redirect()->route('editor.productos.edit', $producto))->name('productos.show');
         Route::get('/productos/{producto}/edit', [EditorProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [EditorProductoController::class, 'update'])->name('productos.update');
         Route::patch('/productos/{producto}/autosave', [EditorProductoController::class, 'autosave'])->name('productos.autosave');
@@ -104,6 +106,7 @@ Route::prefix('director')
     ->group(function (): void {
         Route::get('/productos', [DirectorProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [DirectorProductoController::class, 'create'])->name('productos.create');
+        Route::get('/productos/{producto}', fn ($producto) => redirect()->route('director.productos.edit', $producto))->name('productos.show');
         Route::get('/productos/{producto}/edit', [DirectorProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [DirectorProductoController::class, 'update'])->name('productos.update');
         Route::patch('/productos/{producto}/autosave', [DirectorProductoController::class, 'autosave'])->name('productos.autosave');
@@ -117,6 +120,7 @@ Route::prefix('disenador')
     ->group(function (): void {
         Route::get('/productos', [DisenadorProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [DisenadorProductoController::class, 'create'])->name('productos.create');
+        Route::get('/productos/{producto}', fn ($producto) => redirect()->route('disenador.productos.edit', $producto))->name('productos.show');
         Route::get('/productos/{producto}/edit', [DisenadorProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [DisenadorProductoController::class, 'update'])->name('productos.update');
         Route::patch('/productos/{producto}/autosave', [DisenadorProductoController::class, 'autosave'])->name('productos.autosave');
@@ -129,6 +133,7 @@ Route::prefix('manager')
     ->group(function (): void {
         Route::get('/productos', [ManagerProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [ManagerProductoController::class, 'create'])->name('productos.create');
+        Route::get('/productos/{producto}', fn ($producto) => redirect()->route('manager.productos.edit', $producto))->name('productos.show');
         Route::get('/productos/{producto}/edit', [ManagerProductoController::class, 'edit'])->name('productos.edit');
         Route::put('/productos/{producto}', [ManagerProductoController::class, 'update'])->name('productos.update');
         Route::patch('/productos/{producto}/autosave', [ManagerProductoController::class, 'autosave'])->name('productos.autosave');

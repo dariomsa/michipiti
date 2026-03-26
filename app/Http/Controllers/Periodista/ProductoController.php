@@ -156,7 +156,7 @@ class ProductoController extends Controller
                 $deleteIds = collect($laminaData['delete_archivos'] ?? [])
                     ->map(fn ($id) => (int) $id)
                     ->filter();
-                $maxFiles = $index === 0 ? 3 : 1;
+                $maxFiles = 1;
                 $existingCount = $lamina instanceof CarruselLamina ? $lamina->archivos->count() : 0;
                 $remainingCount = max(0, $existingCount - $deleteIds->count());
                 $finalCount = $remainingCount + count($files);
@@ -165,7 +165,7 @@ class ProductoController extends Controller
                     return back()
                         ->withErrors([
                             "laminas.{$index}.archivos" => $index === 0
-                                ? 'La portada permite hasta 3 archivos.'
+                                ? 'La portada solo permite 1 archivo.'
                                 : 'Cada lámina solo permite 1 archivo.',
                         ])
                         ->withInput();
@@ -183,7 +183,7 @@ class ProductoController extends Controller
                     return back()
                         ->withErrors([
                             "laminas.{$index}.archivos" => $index === 0
-                                ? 'La portada no puede superar 3 archivos entre actuales y nuevos.'
+                                ? 'La portada no puede superar 1 archivo entre actuales y nuevos.'
                                 : 'Esta lámina solo puede conservar o agregar 1 archivo.',
                         ])
                         ->withInput();

@@ -6,7 +6,7 @@
   $sinFoto = (bool) ($lamina['sin_foto'] ?? false);
   $motivo = $lamina['motivo'] ?? '';
   $archivos = $lamina['archivos'] ?? [];
-  $maxArchivos = $index === 0 ? 3 : 1;
+  $maxArchivos = 1;
 @endphp
 
 <div class="lamina-box mb-3" data-lamina="{{ $index }}">
@@ -60,7 +60,7 @@
            name="laminas[{{ $index }}][archivos][]"
            @if($maxArchivos > 1) multiple @endif>
     <div class="count-small mt-1">
-      {{ $index === 0 ? 'Portada: hasta 3 archivos.' : 'Esta lámina admite 1 archivo.' }}
+      {{ $index === 0 ? 'Portada: admite 1 archivo.' : 'Esta lámina admite 1 archivo.' }}
       Word / PDF / Imagen
     </div>
 

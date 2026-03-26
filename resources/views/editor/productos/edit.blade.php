@@ -862,7 +862,7 @@
 
   function newLaminaHtml(index) {
     const label = index === 0 ? 'Portada' : `Lámina ${index + 1}`;
-    const allowsMultipleFiles = index === 0;
+    const allowsMultipleFiles = false;
 
     return `
       <div class="lamina-box mb-3" data-lamina="${index}">
@@ -903,7 +903,7 @@
                  name="laminas[${index}][archivos][]"
                  ${allowsMultipleFiles ? 'multiple' : ''}>
           <div class="count-small mt-1">
-            ${allowsMultipleFiles ? 'Portada: hasta 3 archivos.' : 'Esta lámina admite 1 archivo.'}
+            ${index === 0 ? 'Portada: admite 1 archivo.' : 'Esta lámina admite 1 archivo.'}
             Word / PDF / Imagen
           </div>
         </div>
