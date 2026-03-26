@@ -9,6 +9,8 @@ use App\Services\Carrusel\CarruselSlackNotifier;
 
 class CarruselMovimientoObserver
 {
+    private const SLACK_MOVIMIENTOS_USER_ID = 1;
+
     public function created(CarruselMovimiento $movimiento): void
     {
         $producto = Producto::query()->find($movimiento->carrusel_id);
@@ -34,5 +36,15 @@ class CarruselMovimientoObserver
             $sep;
 
         $notifier->notifyInvolucrados($producto, $texto);
+
+        if (in_array(self::SLACK_MOVIMIENTOS_USER_ID, $notifier->involucradosUserIds($producto), true)) {
+            return;
+        }
+
+        $destinatario = User::query()->find(self::SLACK_MOVIMIENTOS_USER_ID);
+
+        if ($destinatario) {
+            app(\App\Services\Slack\SlackNotificationService::class)->sendDM($destinatario, $texto);
+        }
     }
 }
