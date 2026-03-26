@@ -93,7 +93,7 @@ class AudiovisualController extends Controller
             ->when($estado !== '', fn ($query) => $query->where('estado', $estado))
             ->when($fecha !== '', fn ($query) => $query->whereDate('created_at', $fecha))
             ->latest('created_at')
-            ->paginate(12)
+            ->paginate(20)
             ->withQueryString();
 
         return view('videografia.audiovisuales.index', [

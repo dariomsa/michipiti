@@ -287,6 +287,52 @@
             padding: 1.5rem 1.75rem;
         }
 
+        .compact-listing .page-title {
+            font-size: 1.45rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .compact-listing .card-form .card-body {
+            padding: 1.1rem 1.25rem;
+        }
+
+        .compact-listing .filters-row .form-label {
+            font-size: 0.76rem;
+        }
+
+        .compact-listing .filters-row .form-control,
+        .compact-listing .filters-row .form-select,
+        .compact-listing .filters-row .input-group-text,
+        .compact-listing .filters-row .btn {
+            min-height: 36px;
+            font-size: 0.82rem;
+        }
+
+        .compact-listing .table {
+            font-size: 0.86rem;
+        }
+
+        .compact-listing .table thead th {
+            font-size: 0.78rem;
+            letter-spacing: 0.01em;
+        }
+
+        .compact-listing .table td,
+        .compact-listing .table th {
+            padding-top: 11px !important;
+            padding-bottom: 11px !important;
+        }
+
+        .compact-listing .table .btn-sm {
+            --bs-btn-padding-y: 0.22rem;
+            --bs-btn-padding-x: 0.42rem;
+            --bs-btn-font-size: 0.78rem;
+        }
+
+        .compact-listing .text-muted {
+            font-size: 0.8rem;
+        }
+
         label.form-label {
             font-size: 0.9rem;
             font-weight: 500;
@@ -352,6 +398,100 @@
 
         #topLoadingBar.end {
             width: 100%;
+        }
+
+        .ec-pagination-nav {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .ec-pagination-shell {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.9rem 1rem;
+            border: 1px solid var(--ec-border);
+            background: linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+            box-shadow: 0 10px 24px rgba(28, 25, 23, 0.05);
+        }
+
+        .ec-pagination-summary {
+            color: var(--ec-muted);
+            font-size: 0.86rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .ec-pagination-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .ec-pagination-item {
+            display: flex;
+        }
+
+        .ec-pagination-link {
+            min-width: 2.6rem;
+            height: 2.6rem;
+            padding: 0 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d6d3d1;
+            background: #ffffff;
+            color: var(--ec-text);
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 700;
+            line-height: 1;
+            transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .ec-pagination-link:hover {
+            background: #fdf2f8;
+            border-color: rgba(233, 30, 99, 0.28);
+            color: var(--ec-primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .ec-pagination-link.is-arrow {
+            min-width: 2.9rem;
+            padding: 0;
+            font-size: 1rem;
+        }
+
+        .ec-pagination-link.is-gap {
+            background: transparent;
+            border-color: transparent;
+            color: #78716c;
+            min-width: auto;
+            padding: 0 0.35rem;
+        }
+
+        .ec-pagination-item.is-active .ec-pagination-link {
+            background: linear-gradient(90deg, #1d4ed8, #2563eb);
+            border-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+        }
+
+        .ec-pagination-item.is-disabled .ec-pagination-link {
+            background: #f5f5f4;
+            border-color: #e7e5e4;
+            color: #a8a29e;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         @media (max-width: 1199.98px) {
@@ -450,6 +590,34 @@
             .page-title {
                 font-size: 1.35rem;
                 margin-bottom: 1rem;
+            }
+
+            .compact-listing .page-title {
+                font-size: 1.2rem;
+            }
+
+            .ec-pagination-shell {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0.85rem;
+            }
+
+            .ec-pagination-summary {
+                text-align: center;
+            }
+
+            .ec-pagination-list {
+                justify-content: center;
+            }
+
+            .ec-pagination-link {
+                min-width: 2.35rem;
+                height: 2.35rem;
+                font-size: 0.88rem;
+            }
+
+            .ec-pagination-link.is-arrow {
+                min-width: 2.55rem;
             }
         }
     </style>

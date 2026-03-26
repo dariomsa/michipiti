@@ -51,7 +51,7 @@
   $dateColClass = 'col-12 col-xl-1 col-lg-2';
   $submitColClass = 'col-12 col-xl-1 col-lg-12 d-grid';
 @endphp
-<section class="flex-grow-1">
+<section class="flex-grow-1 compact-listing">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
     <h1 class="page-title mb-0">Listado de Productos</h1>
   </div>
