@@ -288,28 +288,29 @@
         }
 
         .compact-listing .page-title {
-            font-size: 1.45rem;
-            margin-bottom: 0.9rem;
+            font-size: 1.3rem;
+            margin-bottom: 0.7rem;
         }
 
         .compact-listing .card-form .card-body {
-            padding: 1.1rem 1.25rem;
+            padding: 0.95rem 1.05rem;
         }
 
         .compact-listing .filters-row .form-label {
-            font-size: 0.76rem;
+            font-size: 0.72rem;
         }
 
         .compact-listing .filters-row .form-control,
         .compact-listing .filters-row .form-select,
         .compact-listing .filters-row .input-group-text,
         .compact-listing .filters-row .btn {
-            min-height: 36px;
-            font-size: 0.82rem;
+            min-height: 34px;
+            font-size: 0.83rem;
         }
 
         .compact-listing .table {
-            font-size: 0.86rem;
+            font-size: 0.87rem;
+            table-layout: auto;
         }
 
         .compact-listing .table thead th {
@@ -319,13 +320,48 @@
 
         .compact-listing .table td,
         .compact-listing .table th {
-            padding-top: 11px !important;
-            padding-bottom: 11px !important;
+            padding-top: 9px !important;
+            padding-bottom: 9px !important;
+        }
+
+        .compact-listing .table th:first-child,
+        .compact-listing .table td:first-child {
+            width: 42%;
+            min-width: 320px;
+        }
+
+        .compact-listing .table th:nth-child(2),
+        .compact-listing .table td:nth-child(2) {
+            width: 11%;
+        }
+
+        .compact-listing .table th:nth-child(3),
+        .compact-listing .table td:nth-child(3),
+        .compact-listing .table th:nth-child(4),
+        .compact-listing .table td:nth-child(4) {
+            width: 14%;
+        }
+
+        .compact-listing .table th:nth-child(5),
+        .compact-listing .table td:nth-child(5) {
+            width: 10%;
+        }
+
+        .compact-listing .table th:nth-child(6),
+        .compact-listing .table td:nth-child(6) {
+            width: 8%;
+        }
+
+        .compact-listing .table th:nth-child(7),
+        .compact-listing .table td:nth-child(7) {
+            width: 11%;
+            min-width: 112px;
+            white-space: nowrap;
         }
 
         .compact-listing .table .btn-sm {
-            --bs-btn-padding-y: 0.22rem;
-            --bs-btn-padding-x: 0.42rem;
+            --bs-btn-padding-y: 0.16rem;
+            --bs-btn-padding-x: 0.34rem;
             --bs-btn-font-size: 0.78rem;
         }
 
@@ -593,7 +629,7 @@
             }
 
             .compact-listing .page-title {
-                font-size: 1.2rem;
+                font-size: 1.08rem;
             }
 
             .ec-pagination-shell {
