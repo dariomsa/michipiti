@@ -637,7 +637,7 @@
     6: sundayHours
   };
 
-  const allHours = [...new Set(Object.values(scheduleByDay).flat())].sort((a, b) => {
+  const allHours = [...new Set([...Object.values(scheduleByDay).flat(), '14:00'])].sort((a, b) => {
     const [ah, am] = a.split(':').map(Number);
     const [bh, bm] = b.split(':').map(Number);
     return (ah * 60 + am) - (bh * 60 + bm);
