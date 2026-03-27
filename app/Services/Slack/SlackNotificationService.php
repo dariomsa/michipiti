@@ -3,6 +3,7 @@
 namespace App\Services\Slack;
 
 use App\Models\User;
+use Throwable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -28,20 +29,39 @@ class SlackNotificationService
     {
         return Http::withToken($this->token)
             ->acceptJson()
-            ->asJson();
+            ->asJson()
+            ->timeout(5)
+            ->connectTimeout(5);
+    }
+
+    protected function shouldSkipEmail(?string $email): bool
+    {
+        $normalized = mb_strtolower(trim((string) $email));
+
+        return $normalized === ''
+            || str_ends_with($normalized, '@demo.com');
     }
 
     public function userIdByEmail(?string $email): ?string
     {
-        if (! $this->enabled || ! $this->token || ! $email) {
+        if (! $this->enabled || ! $this->token || $this->shouldSkipEmail($email)) {
             return null;
         }
 
-        $response = $this->http()
-            ->get('https://slack.com/api/users.lookupByEmail', [
+        try {
+            $response = $this->http()
+                ->get('https://slack.com/api/users.lookupByEmail', [
+                    'email' => $email,
+                ])
+                ->json();
+        } catch (Throwable $exception) {
+            Log::warning('[SLACK] users.lookupByEmail request failed', [
                 'email' => $email,
-            ])
-            ->json();
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
 
         if (empty($response['ok'])) {
             Log::warning('[SLACK] users.lookupByEmail error', [
@@ -81,6 +101,15 @@ class SlackNotificationService
             return false;
         }
 
+        if ($this->shouldSkipEmail($email)) {
+            Log::info('[SLACK] usuario omitido por email de prueba', [
+                'user_id' => $user->id,
+                'email' => $email,
+            ]);
+
+            return false;
+        }
+
         $slackUserId = $user->slack_user_id ?: $this->userIdByEmail($email);
 
         if (! $slackUserId) {
@@ -97,12 +126,23 @@ class SlackNotificationService
             $user->save();
         }
 
-        $response = $this->http()
-            ->post('https://slack.com/api/chat.postMessage', [
+        try {
+            $response = $this->http()
+                ->post('https://slack.com/api/chat.postMessage', [
+                    'channel' => $slackUserId,
+                    'text' => $text,
+                ])
+                ->json();
+        } catch (Throwable $exception) {
+            Log::warning('[SLACK] chat.postMessage request failed', [
                 'channel' => $slackUserId,
-                'text' => $text,
-            ])
-            ->json();
+                'user_id' => $user->id,
+                'email' => $email,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
 
         if (empty($response['ok'])) {
             Log::warning('[SLACK] chat.postMessage error', [
