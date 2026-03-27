@@ -86,11 +86,13 @@ class ProductoController extends BaseProductoController
         }
 
         $estadoAnterior = $producto->estado;
-        $estadoNuevo = match ($validated['accion']) {
-            'guardar' => $producto->estado,
-            'finalizar' => 'FINALIZADO',
-            default => $producto->estado,
-        };
+        $estadoNuevo = $estadoAnterior === 'APROBADO'
+            ? 'APROBADO'
+            : match ($validated['accion']) {
+                'guardar' => $producto->estado,
+                'finalizar' => 'FINALIZADO',
+                default => $producto->estado,
+            };
 
         $producto->fill([
             'programado_metricool' => (bool) ($validated['programado_metricool'] ?? false),
@@ -103,16 +105,20 @@ class ProductoController extends BaseProductoController
 
         $this->registrarMovimiento(
             producto: $producto,
-            accion: match ($validated['accion']) {
-                'finalizar' => 'FINALIZADO',
-                default => 'EDITADO',
-            },
+            accion: $estadoAnterior === 'APROBADO'
+                ? 'EDITADO'
+                : match ($validated['accion']) {
+                    'finalizar' => 'FINALIZADO',
+                    default => 'EDITADO',
+                },
             estadoAnterior: $estadoAnterior,
             estadoNuevo: $estadoNuevo,
-            motivo: match ($validated['accion']) {
-                'finalizar' => 'Producto finalizado por disenador.',
-                default => 'Producto actualizado por disenador.',
-            },
+            motivo: $estadoAnterior === 'APROBADO'
+                ? 'Producto aprobado actualizado por disenador sin cambio de estado.'
+                : match ($validated['accion']) {
+                    'finalizar' => 'Producto finalizado por disenador.',
+                    default => 'Producto actualizado por disenador.',
+                },
             meta: [
                 'programado_metricool' => $producto->programado_metricool,
             ],
