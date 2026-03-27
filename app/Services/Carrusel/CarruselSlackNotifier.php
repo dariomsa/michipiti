@@ -23,6 +23,17 @@ class CarruselSlackNotifier
         return "📰 *{$titulo}* (ID: {$producto->id})\n👤 Responsable: {$responsable}";
     }
 
+    protected function scopeSlackDeliverableUsers($query)
+    {
+        return $query->where(function ($inner): void {
+            $inner->whereNull('email')
+                ->orWhere('email', 'not like', '%@demo.com');
+        })->where(function ($inner): void {
+            $inner->whereNull('email_slack')
+                ->orWhere('email_slack', 'not like', '%@demo.com');
+        });
+    }
+
     /**
      * @return list<int>
      */
@@ -66,7 +77,7 @@ class CarruselSlackNotifier
             return;
         }
 
-        $users = User::query()
+        $users = $this->scopeSlackDeliverableUsers(User::query())
             ->whereIn('id', $ids)
             ->get(['id', 'name', 'email', 'email_slack', 'slack_user_id']);
 
@@ -87,5 +98,41 @@ class CarruselSlackNotifier
         $users->each(function (User $user) use ($texto): void {
                 $this->slack->sendDM($user, $texto);
             });
+    }
+
+    /**
+     * @param  array<int>  $ids
+     */
+    public function notifyUsersByIds(array $ids, string $texto, ?int $actorUserId = null): void
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+
+        if ($actorUserId) {
+            $ids = array_values(array_diff($ids, [$actorUserId]));
+        }
+
+        if ($ids === []) {
+            return;
+        }
+
+        $users = $this->scopeSlackDeliverableUsers(User::query())
+            ->whereIn('id', $ids)
+            ->get(['id', 'name', 'email', 'email_slack', 'slack_user_id']);
+
+        Log::info('[SLACK DEBUG] destinatarios manuales', [
+            'actor_user_id' => $actorUserId,
+            'destinatarios' => $users->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'email_slack' => $user->email_slack,
+                'slack_user_id' => $user->slack_user_id,
+            ])->values()->all(),
+            'mensaje' => $texto,
+        ]);
+
+        $users->each(function (User $user) use ($texto): void {
+            $this->slack->sendDM($user, $texto);
+        });
     }
 }
