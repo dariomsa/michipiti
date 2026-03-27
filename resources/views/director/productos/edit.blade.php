@@ -587,7 +587,7 @@
   </div>
 </div>
 @include('periodista.productos.partials.autosave', [
-  'autosaveEnabled' => ! $readOnly,
+  'autosaveEnabled' => false,
   'autosaveUrl' => route($routeBase.'.autosave', $producto),
   'autosaveFields' => ['titulo', 'seccion', 'prioridad', 'copy', 'hashtags', 'creditos'],
   'autosaveLaminas' => $canEditLaminas,
@@ -815,6 +815,47 @@
     applyMediaRules(box);
   }
 
+  function reindexLaminas() {
+    if (!laminasWrap) return;
+
+    qa('[data-lamina]', laminasWrap).forEach((box, index) => {
+      box.dataset.lamina = String(index);
+
+      const titleLabel = q('.jsLaminaHeading', box);
+      if (titleLabel) {
+        titleLabel.textContent = index === 0 ? 'Portada' : `Lámina ${index + 1}`;
+      }
+
+      qa('[name]', box).forEach((field) => {
+        field.name = field.name.replace(/laminas\[\d+]/g, `laminas[${index}]`);
+      });
+
+      const titleInput = q('[name$="[titulo]"]', box);
+      if (titleInput) {
+        titleInput.placeholder = `Título de la lámina ${index + 1}`;
+      }
+
+      const sinFoto = q('.jsSinFoto', box);
+      if (sinFoto) {
+        sinFoto.id = `sinFoto${index}`;
+      }
+
+      const sinFotoLabel = sinFoto ? q(`label[for^="sinFoto"]`, box) : null;
+      if (sinFotoLabel && sinFoto) {
+        sinFotoLabel.setAttribute('for', sinFoto.id);
+      }
+
+      qa('.jsDeleteArchivo', box).forEach((checkbox) => {
+        const archivoId = checkbox.value;
+        checkbox.id = `deleteArchivo${index}_${archivoId}`;
+        const label = q(`label[for^="deleteArchivo"]`, checkbox.closest('.form-check') || box);
+        if (label) {
+          label.setAttribute('for', checkbox.id);
+        }
+      });
+    });
+  }
+
   function validateMainForm() {
     const errors = [];
     qa('.is-invalid', formMain || document).forEach(clearInvalid);
@@ -867,7 +908,7 @@
     return `
       <div class="lamina-box mb-3" data-lamina="${index}">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <div class="fw-bold">${label}</div>
+          <div class="fw-bold jsLaminaHeading">${label}</div>
           ${index > 0 ? `
             <button type="button" class="btn btn-outline-danger btn-sm rounded-0 jsRemoveLamina">
               <i class="bi bi-trash"></i>
@@ -1023,6 +1064,7 @@
       wrapper.innerHTML = newLaminaHtml(index);
       const box = wrapper.firstElementChild;
       laminasWrap.appendChild(box);
+      reindexLaminas();
       initLaminaBox(box);
     }));
   }
@@ -1034,6 +1076,7 @@
     const box = removeButton.closest('[data-lamina]');
     if (box) {
       box.remove();
+      reindexLaminas();
       refreshPreview();
     }
   });
@@ -1163,6 +1206,7 @@
     });
   }
 
+  reindexLaminas();
   qa('[data-lamina]').forEach(initLaminaBox);
   refreshPreview();
 })();

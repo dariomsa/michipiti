@@ -645,7 +645,7 @@
 
 <div class="copy-toast" id="copyToast">Copiado</div>
 @include('periodista.productos.partials.autosave', [
-  'autosaveEnabled' => true,
+  'autosaveEnabled' => false,
   'autosaveUrl' => route('manager.productos.autosave', $producto),
   'autosaveFields' => ['disenador_id', 'dificultad', 'pauta_comercial'],
 ])

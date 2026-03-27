@@ -614,7 +614,7 @@
 
 <div class="copy-toast" id="copyToast">Copiado</div>
 @include('periodista.productos.partials.autosave', [
-  'autosaveEnabled' => true,
+  'autosaveEnabled' => false,
   'autosaveUrl' => route('disenador.productos.autosave', $producto),
   'autosaveFields' => ['programado_metricool'],
 ])

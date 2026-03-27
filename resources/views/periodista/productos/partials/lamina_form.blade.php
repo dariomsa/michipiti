@@ -11,7 +11,7 @@
 
 <div class="lamina-box mb-3" data-lamina="{{ $index }}">
   <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="fw-bold">
+    <div class="fw-bold jsLaminaHeading">
       {{ $index === 0 ? 'Portada' : 'Lámina '.($index + 1) }}
     </div>
 
