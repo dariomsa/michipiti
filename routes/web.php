@@ -6,6 +6,8 @@ use App\Http\Controllers\Disenador\ProductoController as DisenadorProductoContro
 use App\Http\Controllers\Director\ProductoController as DirectorProductoController;
 use App\Http\Controllers\Director\DashboardController as DirectorDashboardController;
 use App\Http\Controllers\Editor\ProductoController as EditorProductoController;
+use App\Http\Controllers\CalendarioEspecialController;
+use App\Http\Controllers\HorarioSlotController;
 use App\Http\Controllers\Manager\ProductoController as ManagerProductoController;
 use App\Http\Controllers\PautaController;
 use App\Http\Controllers\PlanificadorController;
@@ -71,6 +73,15 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/planificador/to-pauta', [PlanificadorController::class, 'toPauta']);
     Route::delete('/planificador/{producto}', [PlanificadorController::class, 'destroy']);
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+});
+
+Route::middleware(['auth', 'role:director'])->group(function (): void {
+    Route::get('/horario-slots', [HorarioSlotController::class, 'index'])->name('horario-slots.index');
+    Route::patch('/horario-slots/{horarioSlot}', [HorarioSlotController::class, 'update'])->name('horario-slots.update');
+    Route::get('/calendario-especial', [CalendarioEspecialController::class, 'index'])->name('calendario-especial.index');
+    Route::post('/calendario-especial', [CalendarioEspecialController::class, 'store'])->name('calendario-especial.store');
+    Route::put('/calendario-especial/{calendarioEspecial}', [CalendarioEspecialController::class, 'update'])->name('calendario-especial.update');
+    Route::delete('/calendario-especial/{calendarioEspecial}', [CalendarioEspecialController::class, 'destroy'])->name('calendario-especial.destroy');
 });
 
 Route::prefix('periodista')

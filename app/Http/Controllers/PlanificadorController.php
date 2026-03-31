@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\CarruselMovimiento;
+use App\Models\CalendarioEspecial;
+use App\Models\CalendarioEspecialSlot;
+use App\Models\HorarioSlot;
 use App\Models\Producto;
 use App\Models\Seccion;
 use App\Models\TipoProducto;
@@ -19,19 +22,25 @@ class PlanificadorController extends Controller
 {
     public function index()
     {
+        $baseAllowedSchedule = $this->scheduleByDayZeroBased();
+        $baseVisibleSchedule = $this->visibleHoursZeroBased();
+
         return view('planificador', [
             'secciones' => Seccion::query()
                 ->where('activa', true)
                 ->orderBy('id')
                 ->pluck('nombre')
                 ->all(),
+            'baseAllowedSchedule' => $baseAllowedSchedule,
+            'baseVisibleSchedule' => $baseVisibleSchedule,
+            'specialScheduleByDate' => $this->specialScheduleByDate(),
         ]);
     }
 
     public function horarios()
     {
         $schedule = $this->scheduleByDayZeroBased();
-        $allHours = collect($schedule)
+        $allHours = collect($this->visibleHoursZeroBased())
             ->flatten()
             ->unique()
             ->sort(function (string $a, string $b): int {
@@ -567,16 +576,86 @@ class PlanificadorController extends Controller
 
     private function isAllowedSchedule(string $date, string $time): bool
     {
-        $dayOfWeek = Carbon::parse($date)->dayOfWeekIso;
-        $scheduleByDay = $this->scheduleByDayIso();
+        return in_array($time, $this->allowedHoursForDate($date), true);
+    }
 
-        return in_array($time, $scheduleByDay[$dayOfWeek] ?? [], true);
+    /**
+     * @return array<int, list<string>>
+     */
+    private function visibleHoursZeroBased(): array
+    {
+        $dbSchedule = HorarioSlot::query()
+            ->where('visible', true)
+            ->orderBy('hora')
+            ->get(['dia_semana', 'hora'])
+            ->groupBy('dia_semana')
+            ->map(fn ($slots) => $slots->pluck('hora')
+                ->map(fn ($hour) => substr((string) $hour, 0, 5))
+                ->values()
+                ->all())
+            ->all();
+
+        if ($dbSchedule !== []) {
+            return [
+                0 => $dbSchedule[0] ?? [],
+                1 => $dbSchedule[1] ?? [],
+                2 => $dbSchedule[2] ?? [],
+                3 => $dbSchedule[3] ?? [],
+                4 => $dbSchedule[4] ?? [],
+                5 => $dbSchedule[5] ?? [],
+                6 => $dbSchedule[6] ?? [],
+            ];
+        }
+
+        $allowed = $this->fallbackAllowedScheduleZeroBased();
+        $visible = $allowed;
+
+        foreach ($visible as $dayIndex => $hours) {
+            if (! in_array('14:00', $hours, true)) {
+                $visible[$dayIndex][] = '14:00';
+                sort($visible[$dayIndex]);
+            }
+        }
+
+        return $visible;
     }
 
     /**
      * @return array<int, list<string>>
      */
     private function scheduleByDayZeroBased(): array
+    {
+        $dbSchedule = HorarioSlot::query()
+            ->where('visible', true)
+            ->where('fuera_de_pauta', false)
+            ->orderBy('hora')
+            ->get(['dia_semana', 'hora'])
+            ->groupBy('dia_semana')
+            ->map(fn ($slots) => $slots->pluck('hora')
+                ->map(fn ($hour) => substr((string) $hour, 0, 5))
+                ->values()
+                ->all())
+            ->all();
+
+        if ($dbSchedule !== []) {
+            return [
+                0 => $dbSchedule[0] ?? [],
+                1 => $dbSchedule[1] ?? [],
+                2 => $dbSchedule[2] ?? [],
+                3 => $dbSchedule[3] ?? [],
+                4 => $dbSchedule[4] ?? [],
+                5 => $dbSchedule[5] ?? [],
+                6 => $dbSchedule[6] ?? [],
+            ];
+        }
+
+        return $this->fallbackAllowedScheduleZeroBased();
+    }
+
+    /**
+     * @return array<int, list<string>>
+     */
+    private function fallbackAllowedScheduleZeroBased(): array
     {
         $weekdaysHours = [
             '06:00', '07:00', '08:15', '09:30', '10:45', '11:30', '12:15', '13:30',
@@ -616,6 +695,90 @@ class PlanificadorController extends Controller
             5 => $zeroBased[4],
             6 => $zeroBased[5],
             7 => $zeroBased[6],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function allowedHoursForDate(string $date): array
+    {
+        $special = $this->specialScheduleForDate($date);
+
+        if ($special !== null) {
+            return $special['allowed'];
+        }
+
+        $dayOfWeek = Carbon::parse($date)->dayOfWeekIso;
+        $scheduleByDay = $this->scheduleByDayIso();
+
+        return $scheduleByDay[$dayOfWeek] ?? [];
+    }
+
+    /**
+     * @return array<string, array{visible: list<string>, allowed: list<string>}>
+     */
+    private function specialScheduleByDate(): array
+    {
+        return CalendarioEspecial::query()
+            ->with(['slots' => fn ($query) => $query->where('visible', true)->orderBy('hora')])
+            ->orderBy('fecha')
+            ->get()
+            ->mapWithKeys(function (CalendarioEspecial $item): array {
+                $visible = $item->slots
+                    ->pluck('hora')
+                    ->map(fn ($hour) => substr((string) $hour, 0, 5))
+                    ->values()
+                    ->all();
+
+                $allowed = $item->slots
+                    ->where('fuera_de_pauta', false)
+                    ->pluck('hora')
+                    ->map(fn ($hour) => substr((string) $hour, 0, 5))
+                    ->values()
+                    ->all();
+
+                return [
+                    $item->fecha->format('Y-m-d') => [
+                        'visible' => $visible,
+                        'allowed' => $allowed,
+                    ],
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * @return array{visible: list<string>, allowed: list<string>}|null
+     */
+    private function specialScheduleForDate(string $date): ?array
+    {
+        $special = CalendarioEspecial::query()
+            ->whereDate('fecha', $date)
+            ->first();
+
+        if (! $special) {
+            return null;
+        }
+
+        $visibleSlots = CalendarioEspecialSlot::query()
+            ->where('tipo_feriado', $special->tipo_feriado)
+            ->where('visible', true)
+            ->orderBy('hora')
+            ->get(['hora', 'fuera_de_pauta']);
+
+        return [
+            'visible' => $visibleSlots
+                ->pluck('hora')
+                ->map(fn ($hour) => substr((string) $hour, 0, 5))
+                ->values()
+                ->all(),
+            'allowed' => $visibleSlots
+                ->where('fuera_de_pauta', false)
+                ->pluck('hora')
+                ->map(fn ($hour) => substr((string) $hour, 0, 5))
+                ->values()
+                ->all(),
         ];
     }
 

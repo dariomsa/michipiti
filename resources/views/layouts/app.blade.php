@@ -244,6 +244,24 @@
             opacity: 0.9;
         }
 
+        .sidebar-nav .sidebar-parent > a {
+            font-weight: 700;
+        }
+
+        .sidebar-subnav {
+            list-style: none;
+            margin: -0.05rem 0 0.35rem;
+            padding: 0 0 0 2.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .sidebar-subnav a {
+            padding: 0.5rem 1rem;
+            font-size: 0.84rem;
+        }
+
         .content-panel {
             width: 100%;
             min-width: 0;
@@ -723,6 +741,14 @@
         ['label' => 'Pauta', 'icon' => 'bi-calendar-week', 'url' => route('pauta.index')],
         ['label' => 'Planificador', 'icon' => 'bi-calendar3', 'url' => route('planificador')],
         ['label' => 'Horarios', 'icon' => 'bi-clock-history', 'url' => route('planificador.horarios')],
+        $user?->hasRole('director') ? [
+            'label' => 'Configuración',
+            'icon' => 'bi-sliders',
+            'children' => [
+                ['label' => 'Semanal', 'url' => route('horario-slots.index')],
+                ['label' => 'Feriados', 'url' => route('calendario-especial.index')],
+            ],
+        ] : null,
     ]));
 @endphp
 
@@ -770,14 +796,32 @@
                 @foreach($layoutMenu as $item)
                     @php
                         $href = $item['url'] ?? '#';
+                        $children = $item['children'] ?? [];
                         $active = $href !== '#' && url()->current() === $href;
+                        $childActive = collect($children)->contains(fn ($child) => ($child['url'] ?? '#') !== '#' && url()->current() === $child['url']);
                     @endphp
 
-                    <li>
-                        <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
+                    <li class="{{ $children !== [] ? 'sidebar-parent' : '' }}">
+                        <a href="{{ $href }}" class="{{ ($active || $childActive) ? 'active' : '' }}">
                             <i class="bi {{ $item['icon'] }}"></i>
                             <span>{{ $item['label'] }}</span>
                         </a>
+
+                        @if($children !== [])
+                            <ul class="sidebar-subnav">
+                                @foreach($children as $child)
+                                    @php
+                                        $childHref = $child['url'] ?? '#';
+                                        $isChildActive = $childHref !== '#' && url()->current() === $childHref;
+                                    @endphp
+                                    <li>
+                                        <a href="{{ $childHref }}" class="{{ $isChildActive ? 'active' : '' }}">
+                                            <span>{{ $child['label'] }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
                     </li>
                 @endforeach
             </ul>

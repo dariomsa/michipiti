@@ -5,7 +5,7 @@
 @push('styles')
 <style>
   :root {
-    --border: #e5e7eb;
+    --border: #9ca3af;
     --slot: #ffffff;
 
     --slot-disabled-editable: #dbeafe;
@@ -131,6 +131,7 @@
     top: 0;
     z-index: 3;
     height: var(--thead-h);
+    border-bottom: 2px solid #6b7280;
   }
 
   .calendar-table thead th:not(.hour),
@@ -149,7 +150,7 @@
     position: sticky;
     left: 0;
     z-index: 4;
-    box-shadow: 1px 0 0 0 var(--border);
+    box-shadow: 2px 0 0 0 #6b7280;
   }
 
   .calendar-table thead .hour{
@@ -610,38 +611,9 @@
   const puedeDragDrop = @json($puedeDragDrop);
 
   const dayNames = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-
-  const weekdaysHours = [
-    '06:00','07:00','08:15','09:30','10:45','11:30','12:15','13:30',
-    '14:45','15:30','16:00','17:15','18:30','19:45','20:15','21:00',
-    '22:15','22:45'
-  ];
-
-  const saturdayHours = [
-    '09:00','10:30','12:00','13:30','15:00',
-    '16:30','18:00','19:30','20:30','22:00'
-  ];
-
-  const sundayHours = [
-    '09:30','10:45','12:00','13:30','15:00',
-    '16:30','18:00','19:30','21:00','22:00'
-  ];
-
-  const scheduleByDay = {
-    0: weekdaysHours,
-    1: weekdaysHours,
-    2: weekdaysHours,
-    3: weekdaysHours,
-    4: weekdaysHours,
-    5: saturdayHours,
-    6: sundayHours
-  };
-
-  const allHours = [...new Set([...Object.values(scheduleByDay).flat(), '14:00'])].sort((a, b) => {
-    const [ah, am] = a.split(':').map(Number);
-    const [bh, bm] = b.split(':').map(Number);
-    return (ah * 60 + am) - (bh * 60 + bm);
-  });
+  const baseAllowedSchedule = @json($baseAllowedSchedule);
+  const baseVisibleSchedule = @json($baseVisibleSchedule);
+  const specialScheduleByDate = @json($specialScheduleByDate);
 
   const tbody = document.getElementById('calendarBody');
   const slotModalEl = document.getElementById('slotModal');
@@ -731,6 +703,14 @@
     return `${fecha}|${hora}`;
   }
 
+  function sortHours(hours){
+    return [...new Set(hours)].sort((a, b) => {
+      const [ah, am] = a.split(':').map(Number);
+      const [bh, bm] = b.split(':').map(Number);
+      return (ah * 60 + am) - (bh * 60 + bm);
+    });
+  }
+
   function buildWeekSignature(items){
     return JSON.stringify(
       (items || []).map(item => [
@@ -749,7 +729,8 @@
   }
 
   function isAllowedHour(dayIndex, hour){
-    return (scheduleByDay[dayIndex] || []).includes(hour);
+    const date = fmtISODate(addDays(weekStart, dayIndex));
+    return getAllowedHoursForDate(date).includes(hour);
   }
 
   function isPastSlot(dayIndex, hour){
@@ -768,8 +749,34 @@
   }
 
   function getAllowedHoursForDate(dateStr){
+    const special = specialScheduleByDate[dateStr];
+    if(special){
+      return special.allowed || [];
+    }
+
     const idx = calendarDayIndexFromDate(dateStr);
-    return idx === null ? [] : (scheduleByDay[idx] || []);
+    return idx === null ? [] : (baseAllowedSchedule[idx] || []);
+  }
+
+  function getVisibleHoursForDate(dateStr){
+    const special = specialScheduleByDate[dateStr];
+    if(special){
+      return special.visible || [];
+    }
+
+    const idx = calendarDayIndexFromDate(dateStr);
+    return idx === null ? [] : (baseVisibleSchedule[idx] || []);
+  }
+
+  function getAllHoursForCurrentWeek(){
+    const hours = [];
+
+    for(let dayIndex = 0; dayIndex < 7; dayIndex++){
+      const date = fmtISODate(addDays(weekStart, dayIndex));
+      hours.push(...getVisibleHoursForDate(date));
+    }
+
+    return sortHours(hours);
   }
 
   function formatDayNameFromDate(dateStr){
@@ -870,7 +877,7 @@
     for(let dayIndex = 0; dayIndex < 7; dayIndex++){
       const currentDate = addDays(weekStart, dayIndex);
       const fecha = fmtISODate(currentDate);
-      const allowedHours = scheduleByDay[dayIndex] || [];
+      const allowedHours = getAllowedHoursForDate(fecha);
 
       let occupied = 0;
       let available = 0;
@@ -1106,7 +1113,7 @@
   function buildGrid(){
     tbody.innerHTML = '';
 
-    allHours.forEach(hour => {
+    getAllHoursForCurrentWeek().forEach(hour => {
       const tr = document.createElement('tr');
 
       const hourTd = document.createElement('td');
@@ -1527,12 +1534,13 @@
     }
 
     const selectedDate = new Date(item.fecha + 'T00:00:00');
-    const newWeekStart = startOfWeekMonday(selectedDate);
+      const newWeekStart = startOfWeekMonday(selectedDate);
 
-    if(fmtISODate(newWeekStart) !== fmtISODate(weekStart)){
-      weekStart = newWeekStart;
-      renderHeaders();
-    }
+      if(fmtISODate(newWeekStart) !== fmtISODate(weekStart)){
+        weekStart = newWeekStart;
+        renderHeaders();
+        buildGrid();
+      }
 
     await loadWeek();
 
@@ -1708,18 +1716,21 @@
   btnPrev.addEventListener('click', async () => {
     weekStart = addDays(weekStart, -7);
     renderHeaders();
+    buildGrid();
     await loadWeek();
   });
 
   btnNext.addEventListener('click', async () => {
     weekStart = addDays(weekStart, 7);
     renderHeaders();
+    buildGrid();
     await loadWeek();
   });
 
   btnToday.addEventListener('click', async () => {
     weekStart = startOfWeekMonday(new Date());
     renderHeaders();
+    buildGrid();
     await loadWeek();
   });
 
