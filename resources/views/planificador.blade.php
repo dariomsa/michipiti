@@ -655,6 +655,7 @@
   const slotData = {};
   let dragSource = null;
   let isDragging = false;
+  let isSavingSlot = false;
   let lastWeekSignature = '';
   let autoRefreshTimer = null;
 
@@ -969,6 +970,12 @@
   function setDragOverlayVisible(visible){
     if(!plannerDragOverlay) return;
     plannerDragOverlay.classList.toggle('is-visible', visible);
+  }
+
+  function setSaveButtonState(isSaving){
+    isSavingSlot = isSaving;
+    saveBtn.disabled = isSaving;
+    saveBtn.textContent = isSaving ? 'Guardando...' : 'Guardar';
   }
 
   function getSlotFromCell(td){
@@ -1564,15 +1571,32 @@
   }
 
   saveBtn.addEventListener('click', async () => {
+    if(isSavingSlot){
+      return;
+    }
+
+    setSaveButtonState(true);
+
     try{
       const res = await saveCurrentForm();
       if(res.ok){
         slotModal.hide();
+      } else {
+        setSaveButtonState(false);
       }
     }catch(error){
       console.error(error);
       await showError(getErrorMessage(error, 'No se pudo guardar el producto.'));
+      setSaveButtonState(false);
+    }finally{
+      if(!isModalOpen()){
+        setSaveButtonState(false);
+      }
     }
+  });
+
+  slotModalEl?.addEventListener('hidden.bs.modal', () => {
+    setSaveButtonState(false);
   });
 
   if(approveBtn){
