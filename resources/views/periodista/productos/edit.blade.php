@@ -375,8 +375,10 @@
                         id="copyInput"
                         class="form-control rounded-0"
                         rows="4"
+                        maxlength="2200"
                         required
                         placeholder="Escribir el copy">{{ old('copy', $producto->copy) }}</textarea>
+              <div class="text-end count-small"><span id="copyInputCount">{{ mb_strlen(old('copy', $producto->copy ?? '')) }}</span> / 2200</div>
               <div class="invalid-feedback">
                 El copy es obligatorio.
               </div>
@@ -560,6 +562,8 @@
   const canvaUrlHidden = document.getElementById('canvaUrlHidden');
   const modalCanvaEl = document.getElementById('modalCanva');
   const canvaUrlInput = document.getElementById('canvaUrlInput');
+  const copyInput = document.getElementById('copyInput');
+  const copyInputCount = document.getElementById('copyInputCount');
   const canvaError = document.getElementById('canvaError');
   const btnConfirmarFinalizar = document.getElementById('btnConfirmarFinalizar');
 
@@ -1032,6 +1036,10 @@
       }
     }
 
+    if (event.target === copyInput && copyInputCount) {
+      copyInputCount.textContent = String(event.target.value.length);
+    }
+
     if (event.target.classList.contains('jsUrl')) {
       applyMediaRules(event.target.closest('[data-lamina]'));
     }
@@ -1113,6 +1121,9 @@
 
   reindexLaminas();
   qa('[data-lamina]').forEach(initLaminaBox);
+  if (copyInput && copyInputCount) {
+    copyInputCount.textContent = String(copyInput.value.length);
+  }
   refreshPreview();
 })();
 </script>
