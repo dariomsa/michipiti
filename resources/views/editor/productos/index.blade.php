@@ -329,7 +329,10 @@
             Confirma la aprobación del producto.
           </div>
 
-          <label class="form-label">Enlace Canva</label>
+            @if($producto->canva_url)
+    <a href="{{ $producto->canva_url }}" target="_blank">Enlace Canva
+    </a>
+@endif
           <input type="url"
                  class="form-control rounded-0"
                  name="canva_url"

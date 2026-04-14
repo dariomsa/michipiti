@@ -656,8 +656,7 @@ class ProductoController extends Controller
     {
         $user = request()->user();
 
-        return ($user?->hasAnyRole(['editor', 'director']) ?? false)
-            && $producto->estado === 'FINALIZADO';
+         return $user?->hasAnyRole(['editor', 'director']) ?? false;
     }
 
     protected function puedeVerTodosLosProductos(?User $user): bool

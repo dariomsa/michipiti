@@ -114,7 +114,7 @@ class ProductoController extends BaseProductoController
             estadoAnterior: $estadoAnterior,
             estadoNuevo: $estadoNuevo,
             motivo: $estadoAnterior === 'APROBADO'
-                ? 'Producto aprobado actualizado por disenador sin cambio de estado.'
+                ? 'Producto subido a metricool.'
                 : match ($validated['accion']) {
                     'finalizar' => 'Producto finalizado por disenador.',
                     default => 'Producto actualizado por disenador.',
