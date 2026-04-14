@@ -758,7 +758,7 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a href="{{ $listadoUrl }}" class="brand">
-                <img src="https://michipiti.elcomercio.com/images/chatmichipiti-logo.svg" alt="Chat Michipiti" />
+                <img src="https://michipiti.elcomercio.com/images/michitipiti-blanco.png" alt="Chat Michipiti" />
                 <span class="brand-text">
                     <span class="brand-version">2.0</span>
                 </span>
