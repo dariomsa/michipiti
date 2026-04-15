@@ -149,14 +149,14 @@
             >
           </div>
 
-          <div class="{{ $submitColClass }}">
+          <div class="col-6 col-xl-1 col-lg-12 d-grid">
             <label class="form-label mb-1 d-none d-md-block">&nbsp;</label>
-            <button class="btn btn-outline-secondary" type="submit" style="border-radius:0;">
+            <button class="btn btn-primary " type="submit" style="border-radius:0;">
               Buscar
             </button>
           </div>
 
-          <div class="col-12 d-flex gap-2 mt-2">
+          <div class="col-6 d-flex gap-2 mt-2">
             <a class="btn btn-outline-secondary" href="{{ route($routeBase.'.index') }}" style="border-radius:0;">
               Limpiar filtros
             </a>
