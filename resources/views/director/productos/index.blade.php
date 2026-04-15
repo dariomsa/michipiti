@@ -329,7 +329,14 @@
             Confirma la aprobación del producto.
           </div>
 
-          <label class="form-label">Enlace Canva</label>
+          <a href="#"
+             class="d-none d-inline-block mb-3"
+             id="approveCanvaLink"
+             target="_blank"
+             rel="noopener noreferrer">
+            Enlace Canva
+          </a>
+
           <input type="url"
                  class="form-control rounded-0"
                  name="canva_url"
@@ -352,6 +359,7 @@
   const approveModalEl = document.getElementById('approveModal');
   const approveForm = document.getElementById('approveForm');
   const approveCanvaUrl = document.getElementById('approveCanvaUrl');
+  const approveCanvaLink = document.getElementById('approveCanvaLink');
   const approveModalText = document.getElementById('approveModalText');
   const approveModal = approveModalEl && window.bootstrap
     ? bootstrap.Modal.getOrCreateInstance(approveModalEl)
@@ -364,6 +372,10 @@
     approveForm.action = button.dataset.action || '';
     approveCanvaUrl.value = button.dataset.canvaUrl || '';
     approveModalText.textContent = `Confirma la aprobación de "${button.dataset.productoTitulo || 'este producto'}".`;
+    if (approveCanvaLink) {
+      approveCanvaLink.href = button.dataset.canvaUrl || '#';
+      approveCanvaLink.classList.toggle('d-none', !button.dataset.canvaUrl);
+    }
 
     if (approveModal) {
       approveModal.show();
