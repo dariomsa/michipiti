@@ -145,7 +145,7 @@
           </div>
 
           <div class="col-6 d-flex gap-2 mt-2">
-            <a class="btn btn-outline-secondary" href="{{ route($routeBase.'.index') }}" style="border-radius:0;">
+            <a class="btn btn-outline-secondary" href="{{ route($routeBase.'.index', ['limpiar' => 1]) }}" style="border-radius:0;">
               Limpiar filtros
             </a>
           </div>

@@ -708,6 +708,16 @@
             font-weight: 600;
             color: var(--ec-text);
         }
+
+        .filters-row .filter-active {
+            background: #0d6efd26 !important;
+            box-shadow: none !important;
+        }
+
+        .filters-row .filter-group-active .input-group-text {
+            background: #0d6efd26 !important;
+            box-shadow: none !important;
+        }
     </style>
 
     @stack('styles')
@@ -987,6 +997,26 @@ window.hideBlockingLoader = function () {
     loader.classList.remove('is-visible');
     loader.setAttribute('aria-hidden', 'true');
 };
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function refreshFilterState(control) {
+        const isActive = String(control.value || '').trim() !== '';
+        const group = control.closest('.input-group');
+
+        control.classList.toggle('filter-active', isActive);
+
+        if (group) {
+            group.classList.toggle('filter-group-active', isActive);
+        }
+    }
+
+    document.querySelectorAll('.filters-row input[name], .filters-row select[name]').forEach((control) => {
+        refreshFilterState(control);
+        control.addEventListener('input', () => refreshFilterState(control));
+        control.addEventListener('change', () => refreshFilterState(control));
+    });
+});
 </script>
 
 @stack('scripts')

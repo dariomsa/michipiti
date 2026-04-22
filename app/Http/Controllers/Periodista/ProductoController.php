@@ -22,15 +22,49 @@ use Illuminate\Validation\Rule;
 
 class ProductoController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
-        $q = trim((string) $request->string('q'));
-        $seccionFiltro = $request->string('seccion')->toString();
-        $periodistaFiltro = $request->string('periodista')->toString();
-        $disenadorFiltro = $request->string('disenador')->toString();
-        $estado = $request->string('estado')->toString();
-        $fecha = $request->string('fecha')->toString();
+        $routeBase = $this->routeBaseFromRequest($request);
+        $filtersSessionKey = $this->filtersSessionKey($routeBase);
+
+        if ($request->boolean('limpiar')) {
+            $request->session()->forget($filtersSessionKey);
+
+            return redirect()->route($routeBase.'.index');
+        }
+
+        $filterKeys = ['q', 'seccion', 'periodista', 'disenador', 'estado', 'fecha'];
+        $hasFilterInput = collect($filterKeys)->contains(fn (string $key): bool => $request->query->has($key));
+
+        $filters = $hasFilterInput
+            ? [
+                'q' => trim((string) $request->string('q')),
+                'seccion' => $request->string('seccion')->toString(),
+                'periodista' => $request->string('periodista')->toString(),
+                'disenador' => $request->string('disenador')->toString(),
+                'estado' => $request->string('estado')->toString(),
+                'fecha' => $request->string('fecha')->toString(),
+            ]
+            : $request->session()->get($filtersSessionKey, [
+                'q' => '',
+                'seccion' => '',
+                'periodista' => '',
+                'disenador' => '',
+                'estado' => '',
+                'fecha' => '',
+            ]);
+
+        if ($hasFilterInput) {
+            $request->session()->put($filtersSessionKey, $filters);
+        }
+
+        $q = $filters['q'] ?? '';
+        $seccionFiltro = $filters['seccion'] ?? '';
+        $periodistaFiltro = $filters['periodista'] ?? '';
+        $disenadorFiltro = $filters['disenador'] ?? '';
+        $estado = $filters['estado'] ?? '';
+        $fecha = $filters['fecha'] ?? '';
 
         $productos = Producto::query()
             ->where(fn (Builder $query) => $this->scopeOrigenVisible($query))
@@ -74,7 +108,7 @@ class ProductoController extends Controller
                 ->distinct()
                 ->orderBy('estado')
                 ->pluck('estado'),
-            'routeBase' => $this->routeBaseFromRequest($request),
+            'routeBase' => $routeBase,
             'canFilterPeriodista' => $this->puedeVerTodosLosProductos($user),
         ]);
     }
@@ -730,6 +764,11 @@ class ProductoController extends Controller
         }
 
         return 'periodista.productos';
+    }
+
+    protected function filtersSessionKey(string $routeBase): string
+    {
+        return 'productos.listado.filtros.'.$routeBase;
     }
 
     protected function viewPath(Request $request, string $view): string
