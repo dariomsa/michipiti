@@ -24,7 +24,7 @@ class CalendarioEspecialController extends Controller
         $validated = $request->validate([
             'fecha' => ['required', 'date', 'unique:calendario_especial,fecha'],
             'motivo' => ['required', 'string', 'max:150'],
-            'tipo_feriado' => ['required', 'integer', Rule::in([1])],
+            'tipo_feriado' => ['required', 'integer', Rule::in([1,2])],
         ], [
             'fecha.required' => 'La fecha es obligatoria.',
             'fecha.date' => 'La fecha no es válida.',

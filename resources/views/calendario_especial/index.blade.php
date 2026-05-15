@@ -119,12 +119,18 @@
             <input type="text" class="form-control rounded-0" name="motivo" value="{{ old('motivo') }}" maxlength="150" placeholder="Ej: Viernes Santo" required>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Tipo feriado</label>
-            <select class="form-select rounded-0" name="tipo_feriado" required>
-              <option value="1" {{ old('tipo_feriado', '1') == '1' ? 'selected' : '' }}>Feriado 1</option>
-            </select>
-          </div>
+         @php
+  $tipo = old('tipo_feriado', '1');
+@endphp
+
+<div class="mb-3">
+    <label class="form-label">Tipo feriado</label>
+    <select class="form-select rounded-0" name="tipo_feriado" required>
+        <option value="1" {{ $tipo == '1' ? 'selected' : '' }}>Feriado 1</option>
+        <option value="2" {{ $tipo == '2' ? 'selected' : '' }}>Feriado 2</option>
+		  <option value="2" {{ $tipo == '2' ? 'selected' : '' }}>Sabado</option>
+    </select>
+</div>
 
           <div class="holiday-form-actions">
             <button type="submit" class="btn btn-dark rounded-0">Guardar</button>
@@ -157,18 +163,29 @@
                     <td>Feriado {{ $item->tipo_feriado }}</td>
                     <td>
                       <div class="holiday-row-form">
-                        <form method="POST" action="{{ route('calendario-especial.update', $item) }}" class="holiday-row-form">
-                        @csrf
-                        @method('PUT')
-                        <input type="date" class="form-control rounded-0" name="fecha" value="{{ optional($item->fecha)->format('Y-m-d') }}" required>
-                        <input type="text" class="form-control rounded-0" name="motivo" value="{{ $item->motivo }}" maxlength="150" required>
-                        <select class="form-select rounded-0" name="tipo_feriado" required>
-                          <option value="1" {{ (int) $item->tipo_feriado === 1 ? 'selected' : '' }}>Feriado 1</option>
-                        </select>
-                        <div class="holiday-row-actions">
-                          <button type="submit" class="btn btn-outline-dark btn-sm rounded-0">Actualizar</button>
-                        </div>
-                        </form>
+                     <form method="POST" action="{{ route('calendario-especial.update', $item) }}" class="holiday-row-form">
+    @csrf
+    @method('PUT')
+
+    <input type="date" class="form-control rounded-0" name="fecha"
+           value="{{ optional($item->fecha)->format('Y-m-d') }}" required>
+
+    <input type="text" class="form-control rounded-0" name="motivo"
+           value="{{ $item->motivo }}" maxlength="150" required>
+
+    @php
+        $tipo = old('tipo_feriado', $item->tipo_feriado);
+    @endphp
+
+    <select class="form-select rounded-0" name="tipo_feriado" required>
+        <option value="1" @selected($tipo == 1)>Feriado 1</option>
+        <option value="2" @selected($tipo == 2)>Feriado 2</option>
+    </select>
+
+    <div class="holiday-row-actions">
+        <button type="submit" class="btn btn-outline-dark btn-sm rounded-0">Actualizar</button>
+    </div>
+</form>
                         <form method="POST" action="{{ route('calendario-especial.destroy', $item) }}" class="holiday-delete-form" onsubmit="return confirm('¿Eliminar este feriado?');">
                           @csrf
                           @method('DELETE')
