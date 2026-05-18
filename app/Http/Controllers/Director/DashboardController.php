@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Producto;
 use App\Models\Seccion;
 use App\Models\TipoProducto;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
@@ -26,15 +27,18 @@ class DashboardController extends Controller
             ->all();
 
         $productos = $this->baseQuery($tipoProductoId, $seccionesSeleccionadas)
-            ->with(['movimientos', 'tipoProducto'])
+            ->with(['movimientos', 'tipoProducto', 'user:id,name', 'disenador:id,name'])
             ->orderByDesc('created_at')
             ->get();
 
         $chartDia = $this->chartPorDia($tipoProductoId, $seccionesSeleccionadas);
         $chartSemana = $this->chartPorSemana($tipoProductoId, $seccionesSeleccionadas);
         $categorias = $this->categorias($tipoProductoId, $seccionesSeleccionadas);
-        $ultimosCarruseles = $productos->take(20)->map(function (Producto $producto) {
+        $ultimosCarruseles = $productos->map(function (Producto $producto) {
             $producto->tiempo_diseno = $this->tiempoDiseno($producto);
+            $producto->tiempo_total = $this->formatDuration(
+                $this->diffMinutes($producto->created_at, $producto->updated_at)
+            );
 
             return $producto;
         });
@@ -59,12 +63,20 @@ class DashboardController extends Controller
             'categoriasTabla' => $categorias['table'],
             'ultimosCarruseles' => $ultimosCarruseles->map(function (Producto $producto): array {
                 return [
+                    'id' => $producto->id,
                     'titulo' => $producto->titulo,
                     'estado' => $producto->estado,
                     'seccion' => $producto->seccion,
+                    'periodista' => $producto->user?->name,
+                    'disenador' => $producto->disenador?->name,
+                    'fecha' => $producto->fecha?->format('d/m/Y'),
+                    'hora' => $producto->hora ? substr((string) $producto->hora, 0, 5) : '—',
                     'created_at' => $producto->created_at?->format('d M Y H:i'),
                     'updated_at' => $producto->updated_at?->format('d M Y H:i'),
                     'tiempo_diseno' => $producto->tiempo_diseno,
+                    'tiempo_total' => $this->formatDuration(
+                        $this->diffMinutes($producto->created_at, $producto->updated_at)
+                    ),
                 ];
             })->values()->all(),
             'tipoProductoId' => $tipoProductoId,
@@ -80,6 +92,19 @@ class DashboardController extends Controller
             'ultimosCarruseles' => $ultimosCarruseles,
             'tiposProducto' => TipoProducto::query()->orderBy('nombre')->get(['id', 'nombre', 'slug']),
             'secciones' => Seccion::query()->where('activa', true)->orderBy('nombre')->pluck('nombre'),
+            'periodistas' => User::query()
+                ->whereHas('roles', fn ($query) => $query->whereIn('name', ['periodista', 'editor']))
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'disenadores' => User::query()
+                ->whereHas('roles', fn ($query) => $query->where('name', 'disenador'))
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'estados' => Producto::query()
+                ->select('estado')
+                ->distinct()
+                ->orderBy('estado')
+                ->pluck('estado'),
             'tipoProductoId' => $tipoProductoId,
             'seccionesSeleccionadas' => $seccionesSeleccionadas,
         ]);
