@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CarruselMovimiento extends Model
 {
+    use BelongsToEmpresa;
     use HasFactory;
 
     protected $table = 'carrusel_movimientos';
@@ -16,6 +18,7 @@ class CarruselMovimiento extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'empresa_id',
         'carrusel_id',
         'user_id',
         'accion',

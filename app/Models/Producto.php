@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,14 +10,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Producto extends Model
 {
+    use BelongsToEmpresa;
     use HasFactory;
 
     /**
      * @var list<string>
      */
     protected $fillable = [
+        'empresa_id',
         'tipo_producto_id',
         'user_id',
+        'responsable2_id',
+        'redes_sociales_ids',
         'editor_id',
         'disenador_id',
         'manager_id',
@@ -50,6 +55,7 @@ class Producto extends Model
             'orden_dia' => 'integer',
             'pauta_comercial' => 'boolean',
             'programado_metricool' => 'boolean',
+            'redes_sociales_ids' => 'array',
         ];
     }
 
@@ -66,6 +72,11 @@ class Producto extends Model
     public function editor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'editor_id');
+    }
+
+    public function responsable2(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsable2_id');
     }
 
     public function disenador(): BelongsTo

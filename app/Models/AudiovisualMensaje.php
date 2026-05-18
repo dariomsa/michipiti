@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AudiovisualMensaje extends Model
 {
+    use BelongsToEmpresa;
     use HasFactory;
 
     protected $table = 'audiovisual_mensajes';
@@ -16,6 +18,7 @@ class AudiovisualMensaje extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'empresa_id',
         'audiovisual_id',
         'user_id',
         'reply_to_id',

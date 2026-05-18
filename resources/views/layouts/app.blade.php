@@ -119,6 +119,105 @@
             gap: 0.75rem;
         }
 
+        .brand-dropdown .btn-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            min-height: 46px;
+        }
+
+        .brand-dropdown .btn-selector:hover,
+        .brand-dropdown .show > .btn-selector,
+        .brand-dropdown .btn-selector:focus,
+        .brand-dropdown .btn-selector:active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.28);
+        }
+
+        .brand-logo-sm {
+            width: 65px;
+            height: 35px;
+            border-radius: 6px;
+         
+            color: #2d1a2d;
+            padding: 2px 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+            overflow: hidden; 
+        }
+
+        img.brand-logo-sm {
+            object-fit: contain;
+            padding: 2px;
+        }
+
+        .brand-dropdown-menu {
+            min-width: 280px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            margin-top: 10px !important;
+            border-radius: 10px;
+        }
+
+        .brand-dropdown-item {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .brand-dropdown-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .brand-dropdown-item.is-active {
+            background-color: #e9ecef;
+            color: #111827;
+        }
+
+        .brand-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .brand-name {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .brand-status {
+            font-size: 0.72rem;
+            background: #e9ecef;
+            color: #666;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+
         .mobile-toggle {
             border-radius: 0;
             border: 1px solid rgba(255, 255, 255, 0.24);
@@ -161,6 +260,26 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .empresa-chip-text {
+            line-height: 1.1;
+            min-width: 0;
+        }
+
+        .empresa-chip-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.82;
+        }
+
+        .empresa-chip-name {
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
         }
 
         .logout-btn {
@@ -623,6 +742,17 @@
                 justify-content: space-between;
             }
 
+            .brand-dropdown {
+                width: 100%;
+                flex: 1 1 100%;
+                order: 1;
+            }
+
+            .brand-dropdown .btn-selector {
+                width: 100%;
+                justify-content: space-between;
+            }
+
             .user-chip {
                 flex: 1 1 auto;
                 min-width: 0;
@@ -725,6 +855,41 @@
 <body>
 @php
     $user = auth()->user();
+    $empresaContext = app(\App\Support\EmpresaContext::class);
+    $empresaActiva = $empresaActiva ?? $empresaContext->current();
+    $empresasDisponibles = $empresasDisponibles ?? $empresaContext->available();
+    $resolveEmpresaImagen = function ($empresa): ?string {
+        $imagen = trim((string) ($empresa?->imagen ?? ''));
+
+        if ($imagen === '') {
+            return null;
+        }
+
+        if (str_starts_with($imagen, 'http://') || str_starts_with($imagen, 'https://')) {
+            return $imagen;
+        }
+
+        $imagen = ltrim($imagen, '/');
+        $candidatos = [
+            $imagen,
+            'images/'.$imagen,
+            'images/empresas/'.$imagen,
+        ];
+
+        foreach ($candidatos as $candidato) {
+            if (file_exists(public_path($candidato))) {
+                return asset($candidato);
+            }
+        }
+
+        return null;
+    };
+    $empresaIniciales = collect(explode(' ', (string) ($empresaActiva?->nombre ?? '')))
+        ->filter()
+        ->take(2)
+        ->map(fn ($part) => strtoupper(substr($part, 0, 1)))
+        ->join('');
+    $empresaActivaImagen = $resolveEmpresaImagen($empresaActiva);
     $listadoUrl = route('dashboard');
     $showDashboard = $user?->hasRole('director') ?? false;
 
@@ -779,6 +944,56 @@
             </button>
 
             <div class="topbar-actions">
+                @auth
+                    @if($empresasDisponibles->count() > 0)
+                        <div class="dropdown brand-dropdown">
+                            <button class="btn btn-selector dropdown-toggle" type="button" id="brandSelector" data-bs-toggle="dropdown" aria-expanded="false">
+                                @if($empresaActivaImagen)
+                                    <img src="{{ $empresaActivaImagen }}" alt="{{ $empresaActiva?->nombre ?? 'Empresa' }}" class="brand-logo-sm">
+                                @else
+                                    <span class="brand-logo-sm">{{ $empresaIniciales !== '' ? $empresaIniciales : 'EC' }}</span>
+                                @endif
+                                <span class="empresa-chip-text">
+                                    <span class="empresa-chip-name d-block">{{ $empresaActiva?->nombre ?? 'Sin empresa' }}</span>
+                                </span>
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-end brand-dropdown-menu" aria-labelledby="brandSelector">
+                                @foreach($empresasDisponibles as $empresaMenu)
+                                    @php
+                                        $empresaMenuIniciales = collect(explode(' ', (string) $empresaMenu->nombre))
+                                            ->filter()
+                                            ->take(2)
+                                            ->map(fn ($part) => strtoupper(substr($part, 0, 1)))
+                                            ->join('');
+                                        $empresaMenuImagen = $resolveEmpresaImagen($empresaMenu);
+                                    @endphp
+                                    <li>
+                                        <form method="POST" action="{{ route('empresa-activa.update') }}" class="m-0">
+                                            @csrf
+                                            <input type="hidden" name="empresa_id" value="{{ $empresaMenu->id }}">
+                                            <input type="hidden" name="redirect_to" value="{{ request()->getRequestUri() }}">
+                                            <button type="submit" class="brand-dropdown-item {{ ($empresaActiva?->id ?? null) === $empresaMenu->id ? 'is-active' : '' }}">
+                                                <span class="brand-info">
+                                                    @if($empresaMenuImagen)
+                                                        <img src="{{ $empresaMenuImagen }}" alt="{{ $empresaMenu->nombre }}" class="brand-logo-sm">
+                                                    @else
+                                                        <span class="brand-logo-sm">{{ $empresaMenuIniciales !== '' ? $empresaMenuIniciales : 'EC' }}</span>
+                                                    @endif
+                                                    <span class="brand-name">{{ $empresaMenu->nombre }}</span>
+                                                </span>
+                                                @if(($empresaActiva?->id ?? null) === $empresaMenu->id)
+                                                    <span class="brand-status">Activa</span>
+                                                @endif
+                                            </button>
+                                        </form>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                @endauth
+
                 <div class="user-chip">
                     <i class="bi bi-person-circle fs-5"></i>
                     <div class="user-chip-text">

@@ -2,23 +2,21 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Seccion extends Model
+class RedSocial extends Model
 {
-    use BelongsToEmpresa;
     use HasFactory;
 
-    protected $table = 'secciones';
+    protected $table = 'redes_sociales';
 
     /**
      * @var list<string>
      */
     protected $fillable = [
-        'empresa_id',
         'nombre',
+        'slug',
         'activa',
     ];
 

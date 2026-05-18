@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 
 class CalendarioEspecial extends Model
 {
+    use BelongsToEmpresa;
+
     protected $table = 'calendario_especial';
 
     protected $fillable = [
+        'empresa_id',
         'fecha',
         'motivo',
         'tipo_feriado',
