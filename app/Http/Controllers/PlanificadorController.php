@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CarruselMovimiento;
 use App\Models\CalendarioEspecial;
 use App\Models\CalendarioEspecialSlot;
+use App\Models\Empresa;
 use App\Models\HorarioSlot;
 use App\Models\Producto;
 use App\Models\RedSocial;
@@ -26,6 +27,7 @@ class PlanificadorController extends Controller
     {
         $baseAllowedSchedule = $this->scheduleByDayZeroBased();
         $baseVisibleSchedule = $this->visibleHoursZeroBased();
+        $empresaActivaId = app(EmpresaContext::class)->currentId();
 
         return view('planificador', [
             'secciones' => Seccion::query()
@@ -41,6 +43,11 @@ class PlanificadorController extends Controller
                 ->where('activa', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'slug']),
+            'empresasPublicacion' => Empresa::query()
+                ->where('estado', 'activa')
+                ->when($empresaActivaId, fn ($query) => $query->where('id', '!=', $empresaActivaId))
+                ->orderBy('nombre')
+                ->get(['id', 'nombre']),
             'baseAllowedSchedule' => $baseAllowedSchedule,
             'baseVisibleSchedule' => $baseVisibleSchedule,
             'specialScheduleByDate' => $this->specialScheduleByDate(),
@@ -133,6 +140,15 @@ class PlanificadorController extends Controller
                 ],
                 'redes_sociales_ids' => ['nullable', 'array'],
                 'redes_sociales_ids.*' => ['integer', Rule::exists('redes_sociales', 'id')],
+                'publicar_tambien_en' => ['nullable', 'array'],
+                'publicar_tambien_en.*' => [
+                    'integer',
+                    Rule::exists('empresas', 'id')->where(
+                        fn ($query) => $query
+                            ->where('estado', 'activa')
+                            ->where('id', '!=', app(EmpresaContext::class)->currentId())
+                    ),
+                ],
                 'link' => ['nullable', 'string', 'max:600'],
             ],
             [
@@ -153,6 +169,8 @@ class PlanificadorController extends Controller
                 'tipo_producto_id.exists' => 'El tipo de producto seleccionado no es válido para esta empresa.',
                 'redes_sociales_ids.array' => 'Las redes sociales seleccionadas no tienen un formato válido.',
                 'redes_sociales_ids.*.exists' => 'Una de las redes sociales seleccionadas ya no existe.',
+                'publicar_tambien_en.array' => 'Las empresas seleccionadas no tienen un formato válido.',
+                'publicar_tambien_en.*.exists' => 'Una de las empresas destino ya no es válida.',
                 'link.max' => 'La referencia no puede superar los 600 caracteres.',
             ],
             [
@@ -160,6 +178,7 @@ class PlanificadorController extends Controller
                 'responsable2_id' => 'responsable 2',
                 'tipo_producto_id' => 'tipo de producto',
                 'redes_sociales_ids' => 'redes sociales',
+                'publicar_tambien_en' => 'publicar también en',
                 'link' => 'referencia',
             ],
         );
@@ -223,6 +242,9 @@ class PlanificadorController extends Controller
 
         $producto->save();
         $producto->load(['user:id,name', 'editor:id,name', 'responsable2:id,name', 'tipoProducto:id,nombre,slug']);
+        $publicacionEnOtrasEmpresas = $isNew
+            ? $this->replicarProductoEnEmpresas($producto, $data, $request)
+            : ['creadas' => [], 'conflictos' => []];
 
         $this->registrarMovimiento(
             producto: $producto,
@@ -266,6 +288,8 @@ class PlanificadorController extends Controller
         return response()->json([
             'ok' => true,
             'item' => $this->serializeProducto($producto, $request->user()),
+            'replicadas' => $publicacionEnOtrasEmpresas['creadas'],
+            'replica_conflictos' => $publicacionEnOtrasEmpresas['conflictos'],
         ]);
     }
 
@@ -611,6 +635,85 @@ class PlanificadorController extends Controller
         }
 
         return $tipoProducto->id;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{creadas: list<string>, conflictos: list<string>}
+     */
+    private function replicarProductoEnEmpresas(Producto $producto, array $data, Request $request): array
+    {
+        $empresaIds = collect($data['publicar_tambien_en'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($empresaIds->isEmpty()) {
+            return ['creadas' => [], 'conflictos' => []];
+        }
+
+        $tipoSlug = $producto->tipoProducto?->slug;
+        if (! $tipoSlug) {
+            return ['creadas' => [], 'conflictos' => []];
+        }
+
+        $empresas = Empresa::query()
+            ->whereIn('id', $empresaIds)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $creadas = [];
+        $conflictos = [];
+
+        foreach ($empresas as $empresa) {
+            $ocupado = Producto::withoutGlobalScope('empresa_activa')
+                ->where('empresa_id', $empresa->id)
+                ->whereDate('fecha', $data['fecha'])
+                ->whereTime('hora', $data['hora'])
+                ->exists();
+
+            if ($ocupado) {
+                $conflictos[] = $empresa->nombre;
+                continue;
+            }
+
+            $tipoDestino = TipoProducto::withoutGlobalScope('empresa_activa')
+                ->where('empresa_id', $empresa->id)
+                ->where('slug', $tipoSlug)
+                ->first();
+
+            if (! $tipoDestino) {
+                $conflictos[] = $empresa->nombre;
+                continue;
+            }
+
+            $clon = new Producto();
+            $clon->empresa_id = $empresa->id;
+            $clon->tipo_producto_id = $tipoDestino->id;
+            $clon->user_id = $producto->user_id;
+            $clon->responsable2_id = $producto->responsable2_id;
+            $clon->redes_sociales_ids = $producto->redes_sociales_ids;
+            $clon->editor_id = $request->user()->hasAnyRole(['editor', 'director']) ? $request->user()->id : null;
+            $clon->titulo = $producto->titulo;
+            $clon->fecha = $producto->fecha;
+            $clon->hora = $producto->hora;
+            $clon->orden_dia = $producto->orden_dia;
+            $clon->seccion = $producto->seccion;
+            $clon->copy = $producto->copy;
+            $clon->referencia = $producto->referencia;
+            $clon->estado = $producto->estado;
+            $clon->dificultad = $producto->dificultad;
+            $clon->origen = $producto->origen;
+            $clon->save();
+
+            $creadas[] = $empresa->nombre;
+        }
+
+        return [
+            'creadas' => $creadas,
+            'conflictos' => $conflictos,
+        ];
     }
 
     /**
