@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Model;
 
 class CalendarioEspecialSlot extends Model
 {
+    use BelongsToEmpresa;
+
     protected $table = 'calendario_especial_slots';
 
     protected $fillable = [
+        'empresa_id',
         'tipo_feriado',
         'hora',
         'visible',

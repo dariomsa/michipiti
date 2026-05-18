@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToEmpresa;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CarruselLaminaArchivo extends Model
 {
+    use BelongsToEmpresa;
     use HasFactory;
 
     protected $table = 'carrusel_lamina_archivos';
@@ -16,6 +18,7 @@ class CarruselLaminaArchivo extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'empresa_id',
         'lamina_id',
         'orden',
         'archivo_path',

@@ -7,10 +7,12 @@ use App\Models\CalendarioEspecial;
 use App\Models\CalendarioEspecialSlot;
 use App\Models\HorarioSlot;
 use App\Models\Producto;
+use App\Models\RedSocial;
 use App\Models\Seccion;
 use App\Models\TipoProducto;
 use App\Models\User;
 use App\Services\Carrusel\CarruselSlackNotifier;
+use App\Support\EmpresaContext;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +33,14 @@ class PlanificadorController extends Controller
                 ->orderBy('id')
                 ->pluck('nombre')
                 ->all(),
+            'tiposProducto' => TipoProducto::query()
+                ->whereIn('slug', [TipoProducto::SLUG_CARRUSEL, TipoProducto::SLUG_REEL])
+                ->orderByRaw("FIELD(slug, ?, ?)", [TipoProducto::SLUG_CARRUSEL, TipoProducto::SLUG_REEL])
+                ->get(['id', 'nombre', 'slug']),
+            'redesSociales' => RedSocial::query()
+                ->where('activa', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'slug']),
             'baseAllowedSchedule' => $baseAllowedSchedule,
             'baseVisibleSchedule' => $baseVisibleSchedule,
             'specialScheduleByDate' => $this->specialScheduleByDate(),
@@ -77,7 +87,7 @@ class PlanificadorController extends Controller
         $end = (clone $start)->addDays(6)->endOfDay();
 
         $items = Producto::query()
-            ->with(['user:id,name', 'editor:id,name'])
+            ->with(['user:id,name', 'editor:id,name', 'responsable2:id,name', 'tipoProducto:id,nombre,slug'])
             ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
             ->orderBy('fecha')
             ->orderBy('hora')
@@ -113,6 +123,16 @@ class PlanificadorController extends Controller
                 'estado' => ['nullable', 'string', 'max:30'],
                 'origen' => ['required', Rule::in(['propuesta', 'pauta', 'comercial', 'pendiente'])],
                 'asignado_a' => ['nullable', 'integer', 'exists:users,id'],
+                'responsable2_id' => ['nullable', 'integer', 'exists:users,id'],
+                'tipo_producto_id' => [
+                    'required',
+                    'integer',
+                    Rule::exists('tipo_productos', 'id')->where(
+                        fn ($query) => $query->where('empresa_id', app(EmpresaContext::class)->currentId())
+                    ),
+                ],
+                'redes_sociales_ids' => ['nullable', 'array'],
+                'redes_sociales_ids.*' => ['integer', Rule::exists('redes_sociales', 'id')],
                 'link' => ['nullable', 'string', 'max:600'],
             ],
             [
@@ -128,10 +148,18 @@ class PlanificadorController extends Controller
                 'origen.required' => 'Debes seleccionar un origen.',
                 'origen.in' => 'El origen seleccionado no es válido.',
                 'asignado_a.exists' => 'El responsable seleccionado ya no existe.',
+                'responsable2_id.exists' => 'El responsable 2 seleccionado ya no existe.',
+                'tipo_producto_id.required' => 'Debes seleccionar un tipo de producto.',
+                'tipo_producto_id.exists' => 'El tipo de producto seleccionado no es válido para esta empresa.',
+                'redes_sociales_ids.array' => 'Las redes sociales seleccionadas no tienen un formato válido.',
+                'redes_sociales_ids.*.exists' => 'Una de las redes sociales seleccionadas ya no existe.',
                 'link.max' => 'La referencia no puede superar los 600 caracteres.',
             ],
             [
                 'asignado_a' => 'responsable',
+                'responsable2_id' => 'responsable 2',
+                'tipo_producto_id' => 'tipo de producto',
+                'redes_sociales_ids' => 'redes sociales',
                 'link' => 'referencia',
             ],
         );
@@ -160,6 +188,7 @@ class PlanificadorController extends Controller
                 ($producto->seccion !== $data['seccion']) ||
                 ($producto->titulo !== $data['titulo']) ||
                 (($producto->copy ?? '') !== ($data['descripcion'] ?? '')) ||
+                ((int) $producto->tipo_producto_id !== (int) $data['tipo_producto_id']) ||
                 ($producto->origen !== $origen);
 
             if ($seIntentoEditarCampoBloqueado) {
@@ -168,8 +197,14 @@ class PlanificadorController extends Controller
         }
 
         $producto->fill([
-            'tipo_producto_id' => $this->resolveTipoProductoId(),
+            'tipo_producto_id' => $this->resolveTipoProductoId((int) $data['tipo_producto_id']),
             'user_id' => $data['asignado_a'] ?? $producto->user_id ?? $request->user()->id,
+            'responsable2_id' => $data['responsable2_id'] ?? null,
+            'redes_sociales_ids' => collect($data['redes_sociales_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all(),
             'titulo' => $data['titulo'],
             'fecha' => $data['fecha'],
             'hora' => $data['hora'],
@@ -187,7 +222,7 @@ class PlanificadorController extends Controller
         }
 
         $producto->save();
-        $producto->load(['user:id,name', 'editor:id,name']);
+        $producto->load(['user:id,name', 'editor:id,name', 'responsable2:id,name', 'tipoProducto:id,nombre,slug']);
 
         $this->registrarMovimiento(
             producto: $producto,
@@ -506,6 +541,12 @@ class PlanificadorController extends Controller
         return [
             'id' => $producto->id,
             'tipo_producto_id' => $producto->tipo_producto_id,
+            'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
+            'tipo_producto_slug' => $producto->tipoProducto?->slug,
+            'redes_sociales_ids' => collect($producto->redes_sociales_ids ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all(),
             'fecha' => optional($producto->fecha)->format('Y-m-d'),
             'hora' => $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : null,
             'titulo' => $producto->titulo,
@@ -515,11 +556,14 @@ class PlanificadorController extends Controller
             'origen' => $producto->origen,
             'asignado_a' => $producto->user_id,
             'responsable_nombre' => $producto->user?->name,
+            'responsable2_id' => $producto->responsable2_id,
+            'responsable2_nombre' => $producto->responsable2?->name,
             'link' => $producto->referencia,
             'canva_url' => $producto->canva_url,
             'prioridad' => $producto->prioridad,
             'dificultad' => $producto->dificultad,
             'assigned_at' => optional($producto->assigned_at)->toDateTimeString(),
+            'updated_at' => optional($producto->updated_at)->toDateTimeString(),
             'can_delete' => $this->canDeleteProducto($user, $producto),
         ];
     }
@@ -546,8 +590,18 @@ class PlanificadorController extends Controller
         return 'Solo puedes eliminar productos que estén en estado BORRADOR y con origen propuesta.';
     }
 
-    private function resolveTipoProductoId(): int
+    private function resolveTipoProductoId(?int $tipoProductoId = null): int
     {
+        if ($tipoProductoId) {
+            $tipoProducto = TipoProducto::query()->find($tipoProductoId);
+
+            if (! $tipoProducto) {
+                throw new HttpException(422, 'El tipo de producto seleccionado no existe para la empresa activa.');
+            }
+
+            return $tipoProducto->id;
+        }
+
         $tipoProducto = TipoProducto::query()
             ->where('slug', TipoProducto::SLUG_CARRUSEL)
             ->first();

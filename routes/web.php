@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Disenador\ProductoController as DisenadorProductoController;
 use App\Http\Controllers\Director\ProductoController as DirectorProductoController;
 use App\Http\Controllers\Director\DashboardController as DirectorDashboardController;
+use App\Http\Controllers\EmpresaActivaController;
 use App\Http\Controllers\Editor\ProductoController as EditorProductoController;
 use App\Http\Controllers\CalendarioEspecialController;
 use App\Http\Controllers\HorarioSlotController;
@@ -58,7 +59,8 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
 });
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
+    Route::post('/empresa-activa', [EmpresaActivaController::class, 'update'])->name('empresa-activa.update');
     Route::get('/dashboard', [DirectorDashboardController::class, 'index'])->name('dashboard');
     Route::get('/pauta', [PautaController::class, 'index'])->name('pauta.index');
     Route::get('/pauta/items', [PautaController::class, 'items'])->name('pauta.items');
@@ -86,7 +88,7 @@ Route::middleware(['auth', 'role:director'])->group(function (): void {
 
 Route::prefix('periodista')
     ->name('periodista.')
-    ->middleware(['auth', 'role:periodista'])
+    ->middleware(['auth', 'empresa.activa', 'role:periodista'])
     ->group(function (): void {
         Route::get('/productos', [PeriodistaProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [PeriodistaProductoController::class, 'create'])->name('productos.create');
@@ -99,7 +101,7 @@ Route::prefix('periodista')
 
 Route::prefix('editor')
     ->name('editor.')
-    ->middleware(['auth', 'role:editor'])
+    ->middleware(['auth', 'empresa.activa', 'role:editor'])
     ->group(function (): void {
         Route::get('/productos', [EditorProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [EditorProductoController::class, 'create'])->name('productos.create');
@@ -113,7 +115,7 @@ Route::prefix('editor')
 
 Route::prefix('director')
     ->name('director.')
-    ->middleware(['auth', 'role:director'])
+    ->middleware(['auth', 'empresa.activa', 'role:director'])
     ->group(function (): void {
         Route::get('/productos', [DirectorProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [DirectorProductoController::class, 'create'])->name('productos.create');
@@ -127,7 +129,7 @@ Route::prefix('director')
 
 Route::prefix('disenador')
     ->name('disenador.')
-    ->middleware(['auth', 'role:disenador'])
+    ->middleware(['auth', 'empresa.activa', 'role:disenador'])
     ->group(function (): void {
         Route::get('/productos', [DisenadorProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [DisenadorProductoController::class, 'create'])->name('productos.create');
@@ -140,7 +142,7 @@ Route::prefix('disenador')
 
 Route::prefix('manager')
     ->name('manager.')
-    ->middleware(['auth', 'role:disenador_manager'])
+    ->middleware(['auth', 'empresa.activa', 'role:disenador_manager'])
     ->group(function (): void {
         Route::get('/productos', [ManagerProductoController::class, 'index'])->name('productos.index');
         Route::get('/productos/create', [ManagerProductoController::class, 'create'])->name('productos.create');
@@ -153,7 +155,7 @@ Route::prefix('manager')
 
 Route::prefix('videografia')
     ->name('videografia.')
-    ->middleware(['auth', 'role:videografia,editor,director'])
+    ->middleware(['auth', 'empresa.activa', 'role:videografia,editor,director'])
     ->group(function (): void {
         Route::get('/listado', [VideografiaAudiovisualController::class, 'index'])->name('audiovisuales.index');
         Route::get('/listado/{audiovisual}/edit', [VideografiaAudiovisualController::class, 'edit'])->name('audiovisuales.edit');

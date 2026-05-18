@@ -391,6 +391,137 @@
     opacity: 1;
   }
 
+  #slotModal .modal-dialog{
+    max-width: 760px;
+  }
+
+  #slotModal .modal-header,
+  #slotModal .modal-footer{
+    padding: .7rem .9rem;
+  }
+
+  #slotModal .modal-body{
+    padding: .85rem .9rem;
+  }
+
+  #slotModal .modal-title{
+    font-size: 1rem;
+  }
+
+  #slotModal .badge{
+    font-size: .72rem;
+    padding: .38rem .5rem;
+  }
+
+  #slotModal .row.g-3{
+    --bs-gutter-x: .75rem;
+    --bs-gutter-y: .6rem;
+  }
+
+  #slotModal .form-label{
+    margin-bottom: .25rem;
+    font-size: .83rem;
+    font-weight: 600;
+  }
+
+  #slotModal .form-control,
+  #slotModal .form-select{
+    min-height: 34px;
+    height: 34px;
+    padding: .28rem .65rem;
+    font-size: .9rem;
+    border-radius: .35rem;
+  }
+
+  #slotModal textarea.form-control{
+    min-height: 78px;
+    height: auto;
+    padding-top: .45rem;
+    padding-bottom: .45rem;
+    line-height: 1.25;
+  }
+
+  #slotModal .invalid-feedback{
+    font-size: .74rem;
+  }
+
+  #slotModal .btn{
+    padding: .38rem .75rem;
+    font-size: .88rem;
+  }
+
+  .social-grid{
+    display:grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap:.12rem;
+  }
+
+  .social-grid.is-invalid{
+    border:1px solid #dc3545;
+    border-radius:.55rem;
+    background:#fff5f5;
+  }
+
+  .social-check{
+    position:relative;
+  }
+
+  .social-check input{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .social-card{
+    border:1px solid #cbd5e1;
+    border-radius:.6rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+    min-height:32px;
+    padding:.04rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.95) inset,
+      0 2px 4px rgba(15,23,42,.14),
+      0 0 0 1px rgba(255,255,255,.4);
+    transform: translateY(0);
+    transition:border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease, transform 120ms ease;
+  }
+
+  .social-card img{
+    width:20px;
+    height:20px;
+    object-fit:contain;
+    display:block;
+    filter: drop-shadow(0 1px 1px rgba(15,23,42,.18));
+  }
+
+  .social-check:hover .social-card{
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.95) inset,
+      0 4px 8px rgba(15,23,42,.18),
+      0 0 0 1px rgba(255,255,255,.45);
+  }
+
+  .social-check input:checked + .social-card{
+    border-color:#0d6efd;
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.95) inset,
+      0 4px 10px rgba(13,110,253,.18),
+      inset 0 0 0 1px #0d6efd;
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 767.98px){
+    .social-grid{
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
   @media (max-width: 1400px){
     :root{
       --day-col-w: 220px;
@@ -521,7 +652,7 @@
           <span class="badge text-bg-warning d-none" id="modalOutOfScheduleLabel">Fuera de pauta</span>
         </div>
 
-        <form id="slotForm" class="needs-validation" novalidate>
+        <form id="slotForm" class="needs-validation" novalidate autocomplete="off">
           <input type="hidden" id="formId" name="id" />
           <input type="hidden" id="formIsAllowed" value="1" />
           <input type="hidden" id="formDate" name="fecha" />
@@ -550,6 +681,42 @@
               </select>
             </div>
 
+            <div class="col-md-6">
+              <label class="form-label">Tipo de producto</label>
+              <select class="form-select" id="formTipoProducto" name="tipo_producto_id" required>
+                @foreach($tiposProducto as $tipoProducto)
+                  <option value="{{ $tipoProducto->id }}" data-slug="{{ $tipoProducto->slug }}">
+                    {{ $tipoProducto->nombre }}
+                  </option>
+                @endforeach
+              </select>
+              <div class="invalid-feedback">Selecciona un tipo de producto.</div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Redes sociales</label>
+              <div class="social-grid" id="redesSocialesGrid">
+                @foreach($redesSociales as $redSocial)
+                  <label class="social-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input d-none"
+                      name="redes_sociales_ids[]"
+                      value="{{ $redSocial->id }}"
+                    >
+                    <span class="social-card">
+                      <img
+                        src="{{ asset('images/redes-sociales/'.$redSocial->slug.'.svg') }}"
+                        alt="{{ $redSocial->nombre }}"
+                        loading="lazy"
+                      >
+                    </span>
+                  </label>
+                @endforeach
+              </div>
+              <div class="invalid-feedback d-block d-none" id="redesSocialesError">Selecciona al menos una red social.</div>
+            </div>
+
             <div class="col-12">
               <label class="form-label">Título</label>
               <input type="text" class="form-control" id="formTitle" name="titulo" placeholder="Ej: Titulo" required />
@@ -565,6 +732,13 @@
               <label class="form-label">Responsable</label>
               <select class="form-select" id="formResponsable" name="asignado_a">
                 <option value="">-- Seleccione periodista --</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Responsable 2</label>
+              <select class="form-select" id="formResponsable2" name="responsable2_id">
+                <option value="">-- Opcional --</option>
               </select>
             </div>
 
@@ -633,9 +807,13 @@
   const formDesc = document.getElementById('formDesc');
   const formStatus = document.getElementById('formStatus');
   const formOrigen = document.getElementById('formOrigen');
+  const formTipoProducto = document.getElementById('formTipoProducto');
   const formResponsable = document.getElementById('formResponsable');
+  const formResponsable2 = document.getElementById('formResponsable2');
   const formLink = document.getElementById('formLink');
   const formIsAllowed = document.getElementById('formIsAllowed');
+  const redesSocialesGrid = document.getElementById('redesSocialesGrid');
+  const redesSocialesError = document.getElementById('redesSocialesError');
 
   const saveBtn = document.getElementById('saveSlotBtn');
   const approveBtn = document.getElementById('approveSlotBtn');
@@ -793,6 +971,30 @@
   function refreshModalLabels(){
     modalDayLabel.textContent = `Día: ${formatDayNameFromDate(formDate.value)}`;
     modalHourLabel.textContent = `Hora: ${formTime.value || '-'}`;
+  }
+
+  function getSelectedRedesSociales(){
+    return [...redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]:checked')]
+      .map(input => Number(input.value))
+      .filter(Number.isInteger);
+  }
+
+  function setSelectedRedesSociales(values = []){
+    const selected = new Set((values || []).map(value => Number(value)));
+
+    redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]').forEach(input => {
+      input.checked = selected.has(Number(input.value));
+    });
+  }
+
+  function syncRedesSocialesValidation(showError = false){
+    const hasSelection = getSelectedRedesSociales().length > 0;
+    const shouldShowError = showError && !hasSelection;
+
+    redesSocialesGrid.classList.toggle('is-invalid', shouldShowError);
+    redesSocialesError.classList.toggle('d-none', !shouldShowError);
+
+    return hasSelection;
   }
 
   async function fetchJSON(url, options = {}){
@@ -1059,7 +1261,9 @@
 
     td.title = [
       `Titulo: ${data.titulo || data.seccion || 'Contenido'}`,
+      `Tipo: ${data.tipo_producto_nombre || 'Sin tipo'}`,
       `Responsable: ${data.responsable_nombre || 'Sin responsable'}`,
+      `Responsable 2: ${data.responsable2_nombre || 'Sin responsable 2'}`,
       `Estado: ${data.estado || 'BORRADOR'}`,
       `${data.origen || '-'}`,
     ].join('\n');
@@ -1083,6 +1287,7 @@
     meta.className = 'slot-meta';
     meta.textContent = [
       data.estado || 'BORRADOR',
+      data.tipo_producto_nombre || 'Sin tipo',
       data.responsable_nombre || 'Sin responsable'
     ].filter(Boolean).join(' • ');
 
@@ -1236,6 +1441,8 @@
         item?.titulo,
         item?.descripcion,
         item?.responsable_nombre,
+        item?.responsable2_nombre,
+        item?.tipo_producto_nombre,
         item?.seccion,
         item?.copy,
         item?.hashtags,
@@ -1252,14 +1459,23 @@
   async function loadPeriodistas(){
     const users = await fetchJSON('/planificador/periodistas');
 
-    formResponsable.innerHTML = `<option value="">-- Seleccione periodista --</option>`;
+    const buildOptions = (select) => {
+      const placeholder = select === formResponsable2
+        ? '-- Opcional --'
+        : '-- Seleccione periodista --';
 
-    users.forEach(user => {
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = user.name;
-      formResponsable.appendChild(option);
-    });
+      select.innerHTML = `<option value="">${placeholder}</option>`;
+
+      users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        select.appendChild(option);
+      });
+    };
+
+    buildOptions(formResponsable);
+    buildOptions(formResponsable2);
   }
 
   async function loadWeek(){
@@ -1345,8 +1561,13 @@
     formDesc.readOnly = !fullEditable;
     formStatus.disabled = !fullEditable;
     formOrigen.disabled = !fullEditable;
+    formTipoProducto.disabled = !fullEditable;
     formResponsable.disabled = !(fullEditable || pautaEditable);
+    formResponsable2.disabled = !(fullEditable || pautaEditable);
     formLink.readOnly = !(fullEditable || pautaEditable);
+    redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]').forEach(input => {
+      input.disabled = !fullEditable;
+    });
   }
 
   function showSuccess(message){
@@ -1440,6 +1661,7 @@
     formSeccion.value = existing.seccion || '';
     formTitle.value = existing.titulo || '';
     formOrigen.value = existing.origen || 'propuesta';
+    formTipoProducto.value = existing.tipo_producto_id || formTipoProducto.options[0]?.value || '';
 
     formDesc.value = existing.descripcion || '';
 
@@ -1450,6 +1672,8 @@
     }
 
     formResponsable.value = existing.asignado_a || '';
+    formResponsable2.value = existing.responsable2_id || '';
+    setSelectedRedesSociales(existing.redes_sociales_ids || []);
     formLink.value = existing.link || '';
     formIsAllowed.value = allowed ? '1' : '0';
 
@@ -1505,6 +1729,12 @@
   }
 
   async function saveCurrentForm(){
+    const hasRedesSociales = syncRedesSocialesValidation(true);
+
+    if(!hasRedesSociales){
+      return { ok: false, validation: true };
+    }
+
     if(!form.checkValidity()){
       form.classList.add('was-validated');
       return { ok: false, validation: true };
@@ -1519,7 +1749,10 @@
       descripcion: formDesc.value.trim(),
       estado: formStatus.value,
       origen: formIsAllowed.value === '1' ? (formOrigen.value || 'propuesta') : 'pendiente',
+      tipo_producto_id: formTipoProducto.value ? Number(formTipoProducto.value) : null,
+      redes_sociales_ids: getSelectedRedesSociales(),
       asignado_a: formResponsable.value ? Number(formResponsable.value) : null,
+      responsable2_id: formResponsable2.value ? Number(formResponsable2.value) : null,
       link: formLink.value.trim() || null,
     };
 
@@ -1759,6 +1992,11 @@
   });
 
   searchInput.addEventListener('input', applySearchFilter);
+  redesSocialesGrid?.addEventListener('change', () => {
+    if(redesSocialesGrid.classList.contains('is-invalid')){
+      syncRedesSocialesValidation(true);
+    }
+  });
 
   (async function init(){
     renderHeaders();
