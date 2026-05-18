@@ -155,7 +155,7 @@
             font-weight: 800;
             letter-spacing: 0.04em;
             flex-shrink: 0;
-            overflow: hidden;
+            overflow: hidden; 
         }
 
         img.brand-logo-sm {
