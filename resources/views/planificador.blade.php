@@ -743,6 +743,16 @@
             </div>
 
             <div class="col-md-6">
+              <label class="form-label">Publicar también en</label>
+              <select class="form-select" id="formPublicarTambienEn" name="publicar_tambien_en">
+                <option value="">-- Opcional --</option>
+                @foreach($empresasPublicacion as $empresaPublicacion)
+                  <option value="{{ $empresaPublicacion->id }}">{{ $empresaPublicacion->nombre }}</option>
+                @endforeach
+              </select>
+            </div>
+
+            <div class="col-md-6">
               <label class="form-label">Link/Referencia</label>
               <input type="url" class="form-control" id="formLink" name="link" placeholder="https://..." />
             </div>
@@ -810,6 +820,7 @@
   const formTipoProducto = document.getElementById('formTipoProducto');
   const formResponsable = document.getElementById('formResponsable');
   const formResponsable2 = document.getElementById('formResponsable2');
+  const formPublicarTambienEn = document.getElementById('formPublicarTambienEn');
   const formLink = document.getElementById('formLink');
   const formIsAllowed = document.getElementById('formIsAllowed');
   const redesSocialesGrid = document.getElementById('redesSocialesGrid');
@@ -985,6 +996,16 @@
     redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]').forEach(input => {
       input.checked = selected.has(Number(input.value));
     });
+  }
+
+  function getSelectedEmpresasPublicacion(){
+    const empresaId = Number(formPublicarTambienEn.value);
+
+    return Number.isInteger(empresaId) && empresaId > 0 ? [empresaId] : [];
+  }
+
+  function resetEmpresasPublicacion(){
+    formPublicarTambienEn.value = '';
   }
 
   function syncRedesSocialesValidation(showError = false){
@@ -1564,6 +1585,7 @@
     formTipoProducto.disabled = !fullEditable;
     formResponsable.disabled = !(fullEditable || pautaEditable);
     formResponsable2.disabled = !(fullEditable || pautaEditable);
+    formPublicarTambienEn.disabled = !fullEditable || !!formId.value;
     formLink.readOnly = !(fullEditable || pautaEditable);
     redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]').forEach(input => {
       input.disabled = !fullEditable;
@@ -1673,6 +1695,7 @@
 
     formResponsable.value = existing.asignado_a || '';
     formResponsable2.value = existing.responsable2_id || '';
+    resetEmpresasPublicacion();
     setSelectedRedesSociales(existing.redes_sociales_ids || []);
     formLink.value = existing.link || '';
     formIsAllowed.value = allowed ? '1' : '0';
@@ -1753,6 +1776,7 @@
       redes_sociales_ids: getSelectedRedesSociales(),
       asignado_a: formResponsable.value ? Number(formResponsable.value) : null,
       responsable2_id: formResponsable2.value ? Number(formResponsable2.value) : null,
+      publicar_tambien_en: formId.value ? [] : getSelectedEmpresasPublicacion(),
       link: formLink.value.trim() || null,
     };
 
@@ -1800,7 +1824,12 @@
       approveBtn.dataset.key = newKey;
     }
 
-    return { ok: true, item };
+    return {
+      ok: true,
+      item,
+      replicadas: res.replicadas || [],
+      replica_conflictos: res.replica_conflictos || [],
+    };
   }
 
   saveBtn.addEventListener('click', async () => {
@@ -1813,6 +1842,24 @@
     try{
       const res = await saveCurrentForm();
       if(res.ok){
+        if((res.replicadas || []).length || (res.replica_conflictos || []).length){
+          const mensajes = [];
+
+          if((res.replicadas || []).length){
+            mensajes.push(`Creadas también en: ${res.replicadas.join(', ')}`);
+          }
+
+          if((res.replica_conflictos || []).length){
+            mensajes.push(`No creadas por horario ocupado: ${res.replica_conflictos.join(', ')}`);
+          }
+
+          await Swal.fire({
+            icon: (res.replica_conflictos || []).length ? 'warning' : 'success',
+            html: mensajes.join('<br>'),
+            confirmButtonText: 'Aceptar',
+          });
+        }
+
         slotModal.hide();
       } else {
         setSaveButtonState(false);
