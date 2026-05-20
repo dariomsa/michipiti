@@ -43,6 +43,7 @@ class PautaController extends Controller
                     'hashtags' => $producto->hashtags,
                     'creditos' => $producto->creditos,
                     'canva_url' => $producto->canva_url,
+                    'programado_metricool' => (bool) $producto->programado_metricool,
                     'origen' => $producto->origen,
                 ];
             });
@@ -108,6 +109,32 @@ class PautaController extends Controller
             'fecha' => $validated['fecha'],
             'hora' => $validated['hora'],
             'message' => 'Programación guardada.',
+        ]);
+    }
+
+    public function metricool(Request $request, string $id): JsonResponse
+    {
+        $producto = Producto::query()
+            ->whereKey($id)
+            ->where('origen', '!=', 'propuesta')
+            ->firstOrFail();
+
+        if ($producto->programado_metricool) {
+            return response()->json([
+                'ok' => true,
+                'programado_metricool' => true,
+                'message' => 'El producto ya estaba marcado en Metricool.',
+            ]);
+        }
+
+        $producto->update([
+            'programado_metricool' => true,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'programado_metricool' => true,
+            'message' => 'Producto marcado como programado en Metricool.',
         ]);
     }
 
