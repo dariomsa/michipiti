@@ -65,6 +65,7 @@ Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::get('/pauta', [PautaController::class, 'index'])->name('pauta.index');
     Route::get('/pauta/items', [PautaController::class, 'items'])->name('pauta.items');
     Route::post('/pauta/{id}/programar', [PautaController::class, 'programar'])->name('pauta.programar');
+    Route::post('/pauta/{id}/metricool', [PautaController::class, 'metricool'])->name('pauta.metricool');
     Route::get('/planificador', [PlanificadorController::class, 'index'])->name('planificador');
     Route::get('/planificador/horarios', [PlanificadorController::class, 'horarios'])->name('planificador.horarios');
     Route::get('/planificador/week', [PlanificadorController::class, 'week']);

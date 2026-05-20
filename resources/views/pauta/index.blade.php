@@ -88,6 +88,24 @@
     min-height:44px;
     white-space:pre-line;
   }
+  #modalMetricoolWrap{
+    padding:.45rem .65rem;
+    border-radius:10px;
+    background:#ecfdf3;
+    border:1px solid #86efac;
+    color:#166534;
+    font-weight:700;
+  }
+  #modalMetricool{
+    width:1.1rem;
+    height:1.1rem;
+    border-color:#16a34a;
+    box-shadow:none;
+  }
+  #modalMetricool:checked{
+    background-color:#16a34a;
+    border-color:#16a34a;
+  }
   .btn-copy-all{
     border-radius:10px;
     font-size:.85rem;
@@ -292,6 +310,10 @@
             <div class="mb-2">
               <div class="fw-bold small mb-1">Enlace Canva:</div>
               <a href="#" target="_blank" id="modalEnlaceCanva" rel="noopener">Abrir diseño</a>
+              <label class="d-flex align-items-center gap-2 small mt-2 d-none" id="modalMetricoolWrap">
+                <input type="checkbox" id="modalMetricool" class="form-check-input mt-0">
+                <span>Programado en Metricool</span>
+              </label>
             </div>
 
             <div class="mb-3">
@@ -359,6 +381,7 @@
   const puedeProgramar = @json($puedeProgramar ?? false);
   const URL_ITEMS = @json(route('pauta.items'));
   const URL_PROGRAMAR_TPL = @json(url('/pauta/__ID__/programar'));
+  const URL_METRICOOL_TPL = @json(url('/pauta/__ID__/metricool'));
   const CSRF = @json(csrf_token());
   const STORAGE_KEY = 'pauta_fecha_actual';
   const STORAGE_TTL = 3 * 60 * 1000;
@@ -412,6 +435,8 @@
   const modalEl = document.getElementById('cronogramaModal');
   const modalTitulo = document.getElementById('modalTitulo');
   const modalEnlaceCanva = document.getElementById('modalEnlaceCanva');
+  const modalMetricoolWrap = document.getElementById('modalMetricoolWrap');
+  const modalMetricool = document.getElementById('modalMetricool');
   const modalCopy = document.getElementById('modalCopy');
   const modalHashtags = document.getElementById('modalHashtags');
   const modalCreditos = document.getElementById('modalCreditos');
@@ -530,27 +555,40 @@
     return idx;
   }
 
-  function copyPlainText(text) {
+  async function copyPlainText(text) {
     const plain = String(text || '');
-    const temp = document.createElement('textarea');
-    temp.value = plain;
-    temp.setAttribute('readonly', '');
-    temp.style.position = 'fixed';
-    temp.style.opacity = '0';
-    temp.style.left = '-9999px';
-    document.body.appendChild(temp);
-    temp.focus();
-    temp.select();
-    temp.setSelectionRange(0, temp.value.length);
-    const ok = document.execCommand('copy');
-    document.body.removeChild(temp);
-    if (!ok) {
-      throw new Error('copy_failed');
+
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(plain);
+      return;
+    }
+
+    let copied = false;
+    const onCopy = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const clipboardData = event.clipboardData || window.clipboardData;
+      if (!clipboardData) {
+        return;
+      }
+      clipboardData.setData('text/plain', plain);
+      copied = true;
+    };
+
+    try {
+      document.addEventListener('copy', onCopy, true);
+      const ok = document.execCommand('copy');
+      if (!ok || !copied) {
+        throw new Error('copy_failed');
+      }
+    } finally {
+      document.removeEventListener('copy', onCopy, true);
     }
   }
 
   async function copiarContenidoCompleto() {
     if (!btnCopiarTodo) return;
+    console.log('btnCopiarTodo click');
     const copy = (modalCopy.textContent || '').trim() === '—' ? '' : (modalCopy.textContent || '').trim();
     const hashtags = (modalHashtags.textContent || '').trim() === '—' ? '' : (modalHashtags.textContent || '').trim();
     const creditos = (modalCreditos.textContent || '').trim() === '—' ? '' : (modalCreditos.textContent || '').trim();
@@ -561,17 +599,20 @@
     if (creditos) partes.push(creditos);
 
     const textoFinal = partes.join('\n\n');
+    console.log('textoFinal copiar pauta', textoFinal);
 
     if (!textoFinal) {
+      console.log('textoFinal vacio');
       animateCopyButton(false);
       return;
     }
 
     try {
-      copyPlainText(textoFinal);
+      await copyPlainText(textoFinal);
+      console.log('copiado');
       animateCopyButton(true);
     } catch (e) {
-      console.error(e);
+      console.error('error copiando pauta', e);
       animateCopyButton(false);
     }
   }
@@ -613,7 +654,8 @@
           copy: r.copy || '',
           hashtags: r.hashtags || '',
           creditos: r.creditos || '',
-          canvaUrl: r.canvaUrl || r.canva_url || ''
+          canvaUrl: r.canvaUrl || r.canva_url || '',
+          programadoMetricool: !!(r.programadoMetricool || r.programado_metricool)
         };
       });
       scheduleItemsCache[fechaISO] = scheduleItems;
@@ -647,7 +689,8 @@
           copy: r.copy || '',
           hashtags: r.hashtags || '',
           creditos: r.creditos || '',
-          canvaUrl: r.canvaUrl || r.canva_url || ''
+          canvaUrl: r.canvaUrl || r.canva_url || '',
+          programadoMetricool: !!(r.programadoMetricool || r.programado_metricool)
         };
       });
       scheduleItemsCache[iso] = items;
@@ -836,15 +879,21 @@
       modalEnlaceCanva.textContent = 'Abrir diseño';
       modalEnlaceCanva.style.pointerEvents = 'auto';
       modalEnlaceCanva.style.opacity = '1';
+      modalMetricoolWrap?.classList.remove('d-none');
     } else {
       modalEnlaceCanva.href = 'javascript:void(0)';
       modalEnlaceCanva.textContent = 'Sin enlace de Canva';
       modalEnlaceCanva.style.pointerEvents = 'none';
       modalEnlaceCanva.style.opacity = '.6';
+      modalMetricoolWrap?.classList.add('d-none');
     }
     modalCopy.textContent = item.copy || '—';
     modalHashtags.textContent = item.hashtags || '—';
     modalCreditos.textContent = item.creditos || '—';
+    if (modalMetricool) {
+      modalMetricool.checked = !!item.programadoMetricool;
+      modalMetricool.disabled = !!item.programadoMetricool;
+    }
     modalFechaPub.value = item.fechaISO || currentDateISO;
     modalDiaPublicacion.textContent = setDiaPublicacionFromFecha(modalFechaPub.value);
     await renderAvailableHours(modalFechaPub.value, item);
@@ -859,9 +908,14 @@
     modalEnlaceCanva.textContent = 'Sin enlace de Canva';
     modalEnlaceCanva.style.pointerEvents = 'none';
     modalEnlaceCanva.style.opacity = '.6';
+    modalMetricoolWrap?.classList.add('d-none');
     modalCopy.textContent = '';
     modalHashtags.textContent = '';
     modalCreditos.textContent = '';
+    if (modalMetricool) {
+      modalMetricool.checked = false;
+      modalMetricool.disabled = true;
+    }
     modalFechaPub.value = fechaISO;
     modalDiaPublicacion.textContent = setDiaPublicacionFromFecha(fechaISO);
     await renderAvailableHours(fechaISO, null);
@@ -896,6 +950,51 @@
     } catch (e) {
       console.error(e);
       alert('No se pudo guardar la programación.');
+    }
+  }
+
+  async function marcarMetricool() {
+    const id = (modalCarruselId.value || '').trim();
+
+    if (!id || !modalMetricool || !modalMetricool.checked) {
+      return;
+    }
+
+    try {
+      const res = await fetch(URL_METRICOOL_TPL.replace('__ID__', encodeURIComponent(id)), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': CSRF
+        },
+        body: JSON.stringify({ programado_metricool: true })
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const data = await res.json();
+      modalMetricool.checked = !!data.programado_metricool;
+      modalMetricool.disabled = !!data.programado_metricool;
+
+      const currentId = String(id);
+      scheduleItems = scheduleItems.map(function (item) {
+        return String(item.id) === currentId
+          ? { ...item, programadoMetricool: !!data.programado_metricool }
+          : item;
+      });
+
+      Object.keys(scheduleItemsCache).forEach(function (cacheKey) {
+        scheduleItemsCache[cacheKey] = (scheduleItemsCache[cacheKey] || []).map(function (item) {
+          return String(item.id) === currentId
+            ? { ...item, programadoMetricool: !!data.programado_metricool }
+            : item;
+        });
+      });
+    } catch (e) {
+      console.error('metricool update error:', e);
+      modalMetricool.checked = false;
+      alert('No se pudo actualizar el estado de Metricool.');
     }
   }
 
@@ -943,6 +1042,8 @@
   btnToday?.addEventListener('click', async function () { await setCurrentDate(todayLocalISO()); });
   btnProgramar?.addEventListener('click', programar);
   btnCopiarTodo?.addEventListener('click', copiarContenidoCompleto);
+  modalMetricool?.addEventListener('change', marcarMetricool);
+  console.log('listener btnCopiarTodo', !!btnCopiarTodo);
 
   (async function init() {
     const qs = new URLSearchParams(window.location.search);
