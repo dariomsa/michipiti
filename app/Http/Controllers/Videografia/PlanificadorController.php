@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Videografia;
 
 use App\Http\Controllers\Controller;
 use App\Models\Audiovisual;
+use App\Models\Empresa;
+use App\Models\RedSocial;
 use App\Models\Seccion;
+use App\Models\TipoAudiovisual;
 use App\Models\User;
+use App\Support\EmpresaContext;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,14 +19,37 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class PlanificadorController extends Controller
 {
+    /**
+     * @return list<string>
+     */
+    protected function audiovisualStaffRoles(): array
+    {
+        return ['videografia', 'video_manager'];
+    }
+
     public function index()
     {
+        $empresaActivaId = app(EmpresaContext::class)->currentId();
+
         return view('videografia.audiovisuales.planificador', [
             'secciones' => Seccion::query()
                 ->where('activa', true)
                 ->orderBy('id')
                 ->pluck('nombre')
                 ->all(),
+            'tiposAudiovisuales' => TipoAudiovisual::query()
+                ->where('estado', 'activo')
+                ->orderBy('id')
+                ->get(['id', 'nombre', 'slug']),
+            'redesSociales' => RedSocial::query()
+                ->where('activa', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'slug']),
+            'empresasPublicacion' => Empresa::query()
+                ->where('estado', 'activa')
+                ->when($empresaActivaId, fn ($query) => $query->where('id', '!=', $empresaActivaId))
+                ->orderBy('nombre')
+                ->get(['id', 'nombre']),
         ]);
     }
 
@@ -45,7 +72,7 @@ class PlanificadorController extends Controller
         $end = (clone $start)->addDays(6)->endOfDay();
 
         $items = Audiovisual::query()
-            ->with(['user:id,name', 'editor:id,name'])
+            ->with(['user:id,name', 'editor:id,name', 'responsable2:id,name', 'tipoAudiovisual:id,nombre,slug', 'redesSociales:id,audiovisual_id,nombre'])
             ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
             ->orderBy('fecha')
             ->orderBy('hora')
@@ -60,7 +87,7 @@ class PlanificadorController extends Controller
     {
         $users = User::query()
             ->select('id', 'name')
-            ->whereHas('roles', fn ($query) => $query->where('name', 'videografia'))
+            ->whereHas('roles', fn ($query) => $query->whereIn('name', $this->audiovisualStaffRoles()))
             ->orderBy('name')
             ->get();
 
@@ -79,7 +106,26 @@ class PlanificadorController extends Controller
                 'descripcion' => ['nullable', 'string'],
                 'estado' => ['nullable', 'string', 'max:30'],
                 'origen' => ['required', Rule::in(['propuesta', 'pauta', 'comercial', 'pendiente'])],
+                'tipo_audiovisual_id' => [
+                    'required',
+                    'integer',
+                    Rule::exists('tipo_audiovisuales', 'id')->where(
+                        fn ($query) => $query->where('empresa_id', app(EmpresaContext::class)->currentId())
+                    ),
+                ],
                 'asignado_a' => ['nullable', 'integer', 'exists:users,id'],
+                'responsable2_id' => ['nullable', 'integer', 'exists:users,id'],
+                'redes_sociales_ids' => ['nullable', 'array'],
+                'redes_sociales_ids.*' => ['integer', Rule::exists('redes_sociales', 'id')],
+                'publicar_tambien_en' => ['nullable', 'array'],
+                'publicar_tambien_en.*' => [
+                    'integer',
+                    Rule::exists('empresas', 'id')->where(
+                        fn ($query) => $query
+                            ->where('estado', 'activa')
+                            ->where('id', '!=', app(EmpresaContext::class)->currentId())
+                    ),
+                ],
                 'link' => ['nullable', 'string', 'max:600'],
             ],
             [
@@ -94,11 +140,22 @@ class PlanificadorController extends Controller
                 'titulo.max' => 'El título no puede superar los 200 caracteres.',
                 'origen.required' => 'Debes seleccionar un origen.',
                 'origen.in' => 'El origen seleccionado no es válido.',
+                'tipo_audiovisual_id.required' => 'Debes seleccionar un tipo de audiovisual.',
+                'tipo_audiovisual_id.exists' => 'El tipo de audiovisual seleccionado no es válido.',
                 'asignado_a.exists' => 'El responsable seleccionado ya no existe.',
+                'responsable2_id.exists' => 'El responsable 2 seleccionado ya no existe.',
+                'redes_sociales_ids.array' => 'Las redes sociales seleccionadas no tienen un formato válido.',
+                'redes_sociales_ids.*.exists' => 'Una de las redes sociales seleccionadas ya no existe.',
+                'publicar_tambien_en.array' => 'Las empresas seleccionadas no tienen un formato válido.',
+                'publicar_tambien_en.*.exists' => 'Una de las empresas destino ya no es válida.',
                 'link.max' => 'La referencia no puede superar los 600 caracteres.',
             ],
             [
+                'tipo_audiovisual_id' => 'tipo de audiovisual',
                 'asignado_a' => 'responsable',
+                'responsable2_id' => 'responsable 2',
+                'redes_sociales_ids' => 'redes sociales',
+                'publicar_tambien_en' => 'publicar también en',
                 'link' => 'referencia',
             ],
         );
@@ -140,6 +197,7 @@ class PlanificadorController extends Controller
                 ($audiovisual->seccion !== $data['seccion']) ||
                 ($audiovisual->titulo !== $data['titulo']) ||
                 (($audiovisual->copy ?? '') !== ($data['descripcion'] ?? '')) ||
+                ((int) ($audiovisual->tipo_audiovisual_id ?? 0) !== (int) ($data['tipo_audiovisual_id'] ?? 0)) ||
                 ($audiovisual->origen !== $origen);
 
             if ($seIntentoEditarCampoBloqueado) {
@@ -148,7 +206,9 @@ class PlanificadorController extends Controller
         }
 
         $audiovisual->fill([
+            'tipo_audiovisual_id' => $data['tipo_audiovisual_id'] ?? $audiovisual->tipo_audiovisual_id,
             'user_id' => $data['asignado_a'] ?? $audiovisual->user_id ?? $request->user()->id,
+            'responsable2_id' => $data['responsable2_id'] ?? null,
             'titulo' => $data['titulo'],
             'fecha' => $data['fecha'],
             'hora' => $data['hora'],
@@ -166,7 +226,11 @@ class PlanificadorController extends Controller
         }
 
         $audiovisual->save();
-        $audiovisual->load(['user:id,name', 'editor:id,name']);
+        $this->syncRedesSocialesByIds($audiovisual, $data['redes_sociales_ids'] ?? []);
+        $audiovisual->load(['user:id,name', 'editor:id,name', 'responsable2:id,name', 'tipoAudiovisual:id,nombre,slug', 'redesSociales:id,audiovisual_id,nombre']);
+        $publicacionEnOtrasEmpresas = $isNew
+            ? $this->replicarAudiovisualEnEmpresas($audiovisual, $data, $request)
+            : ['creadas' => [], 'conflictos' => []];
 
         $this->registrarMovimiento(
             audiovisual: $audiovisual,
@@ -180,6 +244,8 @@ class PlanificadorController extends Controller
         return response()->json([
             'ok' => true,
             'item' => $this->serializeProducto($audiovisual, $request->user()),
+            'replicadas' => $publicacionEnOtrasEmpresas['creadas'],
+            'replica_conflictos' => $publicacionEnOtrasEmpresas['conflictos'],
         ]);
     }
 
@@ -398,6 +464,13 @@ class PlanificadorController extends Controller
         return [
             'id' => $audiovisual->id,
             'tipo_audiovisual_id' => $audiovisual->tipo_audiovisual_id,
+            'tipo_audiovisual_nombre' => $audiovisual->tipoAudiovisual?->nombre,
+            'tipo_audiovisual_slug' => $audiovisual->tipoAudiovisual?->slug,
+            'redes_sociales_ids' => $audiovisual->redesSociales
+                ->map(fn ($red) => $this->resolveRedSocialIdByName((string) $red->nombre))
+                ->filter()
+                ->values()
+                ->all(),
             'fecha' => optional($audiovisual->fecha)->format('Y-m-d'),
             'hora' => $audiovisual->hora ? Carbon::parse($audiovisual->hora)->format('H:i') : null,
             'titulo' => $audiovisual->titulo,
@@ -407,12 +480,126 @@ class PlanificadorController extends Controller
             'origen' => $audiovisual->origen,
             'asignado_a' => $audiovisual->user_id,
             'responsable_nombre' => $audiovisual->user?->name,
+            'responsable2_id' => $audiovisual->responsable2_id,
+            'responsable2_nombre' => $audiovisual->responsable2?->name,
             'link' => $audiovisual->referencia,
             'canva_url' => $audiovisual->canva_url,
             'prioridad' => $audiovisual->prioridad,
             'dificultad' => $audiovisual->dificultad,
             'assigned_at' => optional($audiovisual->assigned_at)->toDateTimeString(),
+            'updated_at' => optional($audiovisual->updated_at)->toDateTimeString(),
             'can_delete' => $this->canDeleteProducto($user, $audiovisual),
+        ];
+    }
+
+    /**
+     * @param  list<int|string>  $ids
+     */
+    private function syncRedesSocialesByIds(Audiovisual $audiovisual, array $ids): void
+    {
+        $redes = RedSocial::query()
+            ->whereIn('id', collect($ids)->map(fn ($id) => (int) $id)->all())
+            ->get(['nombre']);
+
+        $audiovisual->redesSociales()->delete();
+
+        foreach ($redes as $red) {
+            $audiovisual->redesSociales()->create([
+                'nombre' => $red->nombre,
+            ]);
+        }
+    }
+
+    private function resolveRedSocialIdByName(string $name): ?int
+    {
+        return RedSocial::query()
+            ->where('nombre', $name)
+            ->value('id');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{creadas: list<string>, conflictos: list<string>}
+     */
+    private function replicarAudiovisualEnEmpresas(Audiovisual $audiovisual, array $data, Request $request): array
+    {
+        $empresaIds = collect($data['publicar_tambien_en'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($empresaIds->isEmpty()) {
+            return ['creadas' => [], 'conflictos' => []];
+        }
+
+        $tipoSlug = $audiovisual->tipoAudiovisual?->slug;
+        $redes = $audiovisual->redesSociales->pluck('nombre')->values()->all();
+        $empresas = Empresa::query()
+            ->whereIn('id', $empresaIds)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $creadas = [];
+        $conflictos = [];
+
+        foreach ($empresas as $empresa) {
+            $ocupado = Audiovisual::withoutGlobalScope('empresa_activa')
+                ->where('empresa_id', $empresa->id)
+                ->whereDate('fecha', $data['fecha'])
+                ->whereTime('hora', $data['hora'])
+                ->exists();
+
+            if ($ocupado) {
+                $conflictos[] = $empresa->nombre;
+                continue;
+            }
+
+            $tipoDestinoId = null;
+            if ($tipoSlug) {
+                $tipoDestino = TipoAudiovisual::withoutGlobalScope('empresa_activa')
+                    ->where('empresa_id', $empresa->id)
+                    ->where('slug', $tipoSlug)
+                    ->first();
+
+                if (! $tipoDestino) {
+                    $conflictos[] = $empresa->nombre;
+                    continue;
+                }
+
+                $tipoDestinoId = $tipoDestino->id;
+            }
+
+            $clon = new Audiovisual();
+            $clon->empresa_id = $empresa->id;
+            $clon->tipo_audiovisual_id = $tipoDestinoId;
+            $clon->user_id = $audiovisual->user_id;
+            $clon->responsable2_id = $audiovisual->responsable2_id;
+            $clon->editor_id = $request->user()->hasAnyRole(['editor', 'director']) ? $request->user()->id : null;
+            $clon->titulo = $audiovisual->titulo;
+            $clon->fecha = $audiovisual->fecha;
+            $clon->hora = $audiovisual->hora;
+            $clon->orden_dia = $audiovisual->orden_dia;
+            $clon->seccion = $audiovisual->seccion;
+            $clon->copy = $audiovisual->copy;
+            $clon->referencia = $audiovisual->referencia;
+            $clon->estado = $audiovisual->estado;
+            $clon->dificultad = $audiovisual->dificultad;
+            $clon->origen = $audiovisual->origen;
+            $clon->save();
+
+            foreach ($redes as $red) {
+                $clon->redesSociales()->create([
+                    'nombre' => $red,
+                ]);
+            }
+
+            $creadas[] = $empresa->nombre;
+        }
+
+        return [
+            'creadas' => $creadas,
+            'conflictos' => $conflictos,
         ];
     }
 

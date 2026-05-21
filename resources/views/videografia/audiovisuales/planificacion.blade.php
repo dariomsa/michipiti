@@ -86,7 +86,7 @@
             @forelse($videografos as $videografo)
               <div class="border p-3 bg-light">{{ $videografo->name }}</div>
             @empty
-              <div class="text-muted">No hay usuarios con rol `videografia` todavía.</div>
+              <div class="text-muted">No hay usuarios con rol `videografia` o `video_manager` todavía.</div>
             @endforelse
           </div>
         </div>

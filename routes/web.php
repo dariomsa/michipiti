@@ -44,7 +44,7 @@ Route::get('/', function () {
         return redirect()->route('periodista.productos.index');
     }
 
-    if ($user->hasRole('videografia')) {
+    if ($user->hasAnyRole(['videografia', 'video_manager'])) {
         return redirect()->route('videografia.audiovisuales.index');
     }
 
@@ -156,9 +156,11 @@ Route::prefix('manager')
 
 Route::prefix('videografia')
     ->name('videografia.')
-    ->middleware(['auth', 'empresa.activa', 'role:videografia,editor,director'])
+    ->middleware(['auth', 'empresa.activa', 'role:videografia,video_manager,editor,director'])
     ->group(function (): void {
         Route::get('/listado', [VideografiaAudiovisualController::class, 'index'])->name('audiovisuales.index');
+        Route::get('/listado/create', [VideografiaAudiovisualController::class, 'create'])->name('audiovisuales.create');
+        Route::post('/listado', [VideografiaAudiovisualController::class, 'store'])->name('audiovisuales.store');
         Route::get('/listado/{audiovisual}/edit', [VideografiaAudiovisualController::class, 'edit'])->name('audiovisuales.edit');
         Route::put('/listado/{audiovisual}', [VideografiaAudiovisualController::class, 'update'])->name('audiovisuales.update');
         Route::post('/listado/{audiovisual}/mensajes', [VideografiaAudiovisualController::class, 'storeMessage'])->name('audiovisuales.mensajes.store');

@@ -23,6 +23,7 @@ class Audiovisual extends Model
         'empresa_id',
         'tipo_audiovisual_id',
         'user_id',
+        'responsable2_id',
         'editor_id',
         'disenador_id',
         'manager_id',
@@ -36,6 +37,10 @@ class Audiovisual extends Model
         'referencia',
         'hashtags',
         'canva_url',
+        'archivo_final_path',
+        'archivo_final_original_name',
+        'archivo_final_mime',
+        'archivo_final_size',
         'creditos',
         'estado',
         'prioridad',
@@ -72,6 +77,11 @@ class Audiovisual extends Model
     public function editor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'editor_id');
+    }
+
+    public function responsable2(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsable2_id');
     }
 
     public function disenador(): BelongsTo

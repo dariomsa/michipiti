@@ -15,6 +15,7 @@ class RoleCatalog
             'editor',
             'disenador',
             'disenador_manager',
+            'video_manager',
             'comercial',
             'comunity_manager',
             'director',

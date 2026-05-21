@@ -188,7 +188,7 @@
                 if ($audiovisual->estado === 'PUBLICADO') $dotColor = '#1565c0';
 
                 $actionUrl = route('videografia.audiovisuales.edit', $audiovisual);
-                $puedeEditar = auth()->user()?->hasAnyRole(['videografia', 'editor', 'director']);
+                $puedeEditar = auth()->user()?->hasAnyRole(['videografia', 'video_manager', 'editor', 'director']);
                 $puedeVer = ! $puedeEditar;
               @endphp
 

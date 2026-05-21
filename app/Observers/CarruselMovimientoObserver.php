@@ -35,7 +35,7 @@ class CarruselMovimientoObserver
             $motivo.
             $sep;
 
-        $notifier->notifyInvolucrados($producto, $texto);
+      //  $notifier->notifyInvolucrados($producto, $texto);
 
         if (in_array(self::SLACK_MOVIMIENTOS_USER_ID, $notifier->involucradosUserIds($producto), true)) {
             return;

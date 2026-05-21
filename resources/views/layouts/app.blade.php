@@ -903,7 +903,7 @@
         $listadoUrl = route('manager.productos.index');
     } elseif ($user?->hasRole('periodista')) {
         $listadoUrl = route('periodista.productos.index');
-    } elseif ($user?->hasRole('videografia')) {
+    } elseif ($user?->hasAnyRole(['videografia', 'video_manager'])) {
         $listadoUrl = route('videografia.audiovisuales.index');
     }
 
@@ -1053,7 +1053,7 @@
                 @endforeach
             </ul>
 
-            {{-- @if($audiovisualesMenu !== [])
+            @if($audiovisualesMenu !== [])
                 <div class="sidebar-title pt-3">
                     <i class="bi bi-camera-reels"></i>
                     <span>Audiovisuales</span>
@@ -1074,7 +1074,7 @@
                         </li>
                     @endforeach
                 </ul>
-            @endif --}}
+            @endif
         </aside>
 
         <div class="content-panel">

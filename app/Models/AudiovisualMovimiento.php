@@ -43,6 +43,9 @@ class AudiovisualMovimiento extends Model
             'CREADO' => 'Creado',
             'EDITADO' => 'Editado',
             'COMENTARIO' => 'Comentario',
+            'ENVIADO_REVISION' => 'Enviado a revisión',
+            'ASIGNADO' => 'Asignado',
+            'FINALIZADO' => 'Finalizado',
             default => str_replace('_', ' ', ucfirst(strtolower($this->accion))),
         };
     }
