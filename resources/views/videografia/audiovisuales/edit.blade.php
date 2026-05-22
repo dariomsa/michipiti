@@ -136,6 +136,9 @@
   $saveLabel = (!($isCreate ?? false) && $currentEstado !== 'BORRADOR') ? 'Guardar cambios' : 'Guardar borrador';
   $archivoFinalPath = old('archivo_final_path', $audiovisual->archivo_final_path);
   $archivoFinalNombre = old('archivo_final_original_name', $audiovisual->archivo_final_original_name);
+  $slackPermalink = old('slack_permalink', $audiovisual->slack_permalink);
+  $slackPrivateUrl = old('slack_private_url', $audiovisual->slack_private_url);
+  $archivoFinalUrl = $slackPermalink ?: $slackPrivateUrl ?: ($archivoFinalPath ? asset('storage/'.$archivoFinalPath) : null);
 @endphp
 
 <section class="flex-grow-1">
@@ -390,8 +393,8 @@
             <div class="product-meta-item">
               <span class="product-meta-label">Archivo final</span>
               <strong class="text-break">
-                @if($archivoFinalPath && $archivoFinalNombre)
-                  <a href="{{ asset('storage/'.$archivoFinalPath) }}" target="_blank" rel="noopener">{{ $archivoFinalNombre }}</a>
+                @if($archivoFinalUrl && $archivoFinalNombre)
+                  <a href="{{ $archivoFinalUrl }}" target="_blank" rel="noopener">{{ $archivoFinalNombre }}</a>
                 @else
                   -
                 @endif
@@ -464,10 +467,10 @@
             <input type="file" name="archivo_final" form="videoForm" class="form-control rounded-0">
           </div>
 
-          @if($archivoFinalPath && $archivoFinalNombre)
+          @if($archivoFinalUrl && $archivoFinalNombre)
             <div class="small">
               Archivo actual:
-              <a href="{{ asset('storage/'.$archivoFinalPath) }}" target="_blank" rel="noopener">{{ $archivoFinalNombre }}</a>
+              <a href="{{ $archivoFinalUrl }}" target="_blank" rel="noopener">{{ $archivoFinalNombre }}</a>
             </div>
           @endif
         </div>

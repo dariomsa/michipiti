@@ -10,15 +10,18 @@ use App\Models\AudiovisualGrabacionEdicion;
 use App\Models\Seccion;
 use App\Models\TipoAudiovisual;
 use App\Models\User;
+use App\Services\SlackFileUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class AudiovisualController extends Controller
 {
@@ -146,7 +149,7 @@ class AudiovisualController extends Controller
         ?int $videografoId,
         ?string $canvaUrl,
         bool $hasUploadedFinalFile,
-        bool $hasExistingFinalFile,
+        bool $hasExistingSlackFile,
     ): array {
         $user = $request->user();
         $estadoActual = (string) ($audiovisual->estado ?: 'BORRADOR');
@@ -160,7 +163,7 @@ class AudiovisualController extends Controller
         return match ($workflowAction) {
             'send_revision' => $this->transitionToRevision($user, $estadoActual),
             'assign' => $this->transitionToAssigned($user, $estadoActual, $videografoId),
-            'finalize' => $this->transitionToFinalized($user, $estadoActual, $canvaUrl, $hasUploadedFinalFile, $hasExistingFinalFile),
+            'finalize' => $this->transitionToFinalized($user, $estadoActual, $canvaUrl, $hasUploadedFinalFile, $hasExistingSlackFile),
             default => [
                 'estado' => $audiovisual->exists ? $estadoActual : 'BORRADOR',
                 'accion' => $audiovisual->exists ? 'EDITADO' : 'CREADO',
@@ -233,7 +236,7 @@ class AudiovisualController extends Controller
         string $estadoActual,
         ?string $canvaUrl,
         bool $hasUploadedFinalFile,
-        bool $hasExistingFinalFile,
+        bool $hasExistingSlackFile,
     ): array
     {
         if (! $this->canFinalizeAssigned($user)) {
@@ -248,7 +251,7 @@ class AudiovisualController extends Controller
             ]);
         }
 
-        if (! filled($canvaUrl) && ! $hasUploadedFinalFile && ! $hasExistingFinalFile) {
+        if (! filled($canvaUrl) && ! $hasUploadedFinalFile && ! $hasExistingSlackFile) {
             throw ValidationException::withMessages([
                 'canva_url' => 'Debes pegar un enlace o subir un archivo antes de pasar a FINALIZADO.',
             ]);
@@ -432,7 +435,7 @@ class AudiovisualController extends Controller
             ->with('success', 'Audiovisual creado correctamente.');
     }
 
-    public function update(Request $request, Audiovisual $audiovisual): RedirectResponse
+    public function update(Request $request, Audiovisual $audiovisual, SlackFileUploader $slackFileUploader): RedirectResponse
     {
         $workflowAction = $this->resolveWorkflowAction($request);
         $validated = $request->validate([
@@ -476,10 +479,43 @@ class AudiovisualController extends Controller
             videografoId: isset($validated['videografo']) ? (int) $validated['videografo'] : (int) ($audiovisual->disenador_id ?? 0),
             canvaUrl: $validated['canva_url'] ?? $audiovisual->canva_url,
             hasUploadedFinalFile: $request->hasFile('archivo_final'),
-            hasExistingFinalFile: filled($audiovisual->archivo_final_path),
+            hasExistingSlackFile: filled($audiovisual->slack_file_id),
         );
 
-        DB::transaction(function () use ($request, $audiovisual, $validated, $tipoAudiovisual, $transition): void {
+        $slackFileData = null;
+
+        if ($workflowAction === 'finalize' && $request->hasFile('archivo_final')) {
+            try {
+                $slackUpload = $slackFileUploader->upload(
+                    $request->file('archivo_final'),
+                    $validated['titulo'],
+                    "Audiovisual finalizado: {$validated['titulo']}"
+                );
+            } catch (Throwable $exception) {
+                Log::error('Audiovisual Slack upload failed', [
+                    'message' => $exception->getMessage(),
+                    'audiovisual_id' => $audiovisual->id,
+                    'user_id' => $request->user()?->id,
+                ]);
+
+                return back()
+                    ->withInput()
+                    ->withErrors(['archivo_final' => 'No se pudo subir el archivo a Slack. Revisa la configuración del bot y el canal.']);
+            }
+
+            $file = $request->file('archivo_final');
+            $slackFileData = [
+                'archivo_final_path' => null,
+                'archivo_final_original_name' => $file->getClientOriginalName(),
+                'archivo_final_mime' => $file->getClientMimeType(),
+                'archivo_final_size' => (int) $file->getSize(),
+                'slack_file_id' => $slackUpload['file_id'],
+                'slack_permalink' => $slackUpload['permalink'],
+                'slack_private_url' => $slackUpload['private_url'],
+            ];
+        }
+
+        DB::transaction(function () use ($request, $audiovisual, $validated, $tipoAudiovisual, $transition, $slackFileData): void {
             $tipoSlug = $tipoAudiovisual?->slug;
             $estadoAnterior = $audiovisual->estado;
 
@@ -511,7 +547,6 @@ class AudiovisualController extends Controller
             $audiovisual->save();
 
             $briefData = $this->storeBriefIfPresent($request, $audiovisual);
-            $finalFileData = $this->storeFinalFileIfPresent($request, $audiovisual);
 
             $this->syncTipoDetalles($audiovisual, $validated, $tipoSlug, $briefData);
             $this->syncSimpleRows(
@@ -529,8 +564,8 @@ class AudiovisualController extends Controller
                     : [],
             );
 
-            if ($finalFileData) {
-                $audiovisual->forceFill($finalFileData)->save();
+            if ($slackFileData) {
+                $audiovisual->forceFill($slackFileData)->save();
             }
 
             $this->registrarMovimiento(
@@ -728,26 +763,6 @@ class AudiovisualController extends Controller
         if ($path) {
             Storage::disk('public')->delete($path);
         }
-    }
-
-    /**
-     * @return array{archivo_final_path:string, archivo_final_original_name:string, archivo_final_mime:?string, archivo_final_size:int}|null
-     */
-    protected function storeFinalFileIfPresent(Request $request, Audiovisual $audiovisual): ?array
-    {
-        if (! $request->hasFile('archivo_final')) {
-            return null;
-        }
-
-        $archivo = $request->file('archivo_final');
-        $this->deleteStoredBrief($audiovisual->archivo_final_path);
-
-        return [
-            'archivo_final_path' => $archivo->store("audiovisuales/{$audiovisual->id}/final", 'public'),
-            'archivo_final_original_name' => $archivo->getClientOriginalName(),
-            'archivo_final_mime' => $archivo->getClientMimeType(),
-            'archivo_final_size' => (int) $archivo->getSize(),
-        ];
     }
 
     /**
