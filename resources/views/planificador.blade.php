@@ -1582,13 +1582,13 @@
     formDesc.readOnly = !fullEditable;
     formStatus.disabled = !fullEditable;
     formOrigen.disabled = !fullEditable;
-    formTipoProducto.disabled = !fullEditable;
+    formTipoProducto.disabled = !(fullEditable || pautaEditable);
     formResponsable.disabled = !(fullEditable || pautaEditable);
     formResponsable2.disabled = !(fullEditable || pautaEditable);
     formPublicarTambienEn.disabled = !fullEditable || !!formId.value;
     formLink.readOnly = !(fullEditable || pautaEditable);
     redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]').forEach(input => {
-      input.disabled = !fullEditable;
+      input.disabled = !(fullEditable || pautaEditable);
     });
   }
 

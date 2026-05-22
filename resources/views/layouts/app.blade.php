@@ -910,6 +910,7 @@
     $audiovisualesMenu = $audiovisualesMenu ?? [
         ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => route('videografia.audiovisuales.index')],
         ['label' => 'Planificación', 'icon' => 'bi-calendar3', 'url' => route('videografia.audiovisuales.planificacion')],
+        ['label' => 'Multimedia', 'icon' => 'bi-collection-play', 'url' => route('videografia.audiovisuales.multimedia')],
     ];
 
     $layoutMenu = $layoutMenu ?? array_values(array_filter([

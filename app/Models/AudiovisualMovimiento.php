@@ -46,6 +46,7 @@ class AudiovisualMovimiento extends Model
             'ENVIADO_REVISION' => 'Enviado a revisión',
             'ASIGNADO' => 'Asignado',
             'FINALIZADO' => 'Finalizado',
+            'ARCHIVO_SLACK_ELIMINADO' => 'Archivo de Slack eliminado',
             default => str_replace('_', ' ', ucfirst(strtolower($this->accion))),
         };
     }

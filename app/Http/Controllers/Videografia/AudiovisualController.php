@@ -636,6 +636,81 @@ class AudiovisualController extends Controller
         ]);
     }
 
+    public function multimedia(Request $request): View
+    {
+        $q = trim((string) $request->string('q'));
+
+        $audiovisuales = Audiovisual::query()
+            ->with(['user:id,name', 'disenador:id,name'])
+            ->whereNotNull('slack_file_id')
+            ->when($q !== '', function ($query) use ($q): void {
+                $query->where(function ($innerQuery) use ($q): void {
+                    $innerQuery
+                        ->where('titulo', 'like', "%{$q}%")
+                        ->orWhere('seccion', 'like', "%{$q}%")
+                        ->orWhere('slack_file_id', 'like', "%{$q}%");
+                });
+            })
+            ->latest('updated_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('videografia.audiovisuales.multimedia', [
+            'audiovisuales' => $audiovisuales,
+            'q' => $q,
+        ]);
+    }
+
+    public function destroySlackMedia(Request $request, Audiovisual $audiovisual, SlackFileUploader $slackFileUploader): RedirectResponse
+    {
+        if (! $request->user()?->hasAnyRole(['videografia', 'video_manager', 'editor', 'director'])) {
+            abort(403);
+        }
+
+        if (! filled($audiovisual->slack_file_id)) {
+            return redirect()
+                ->route('videografia.audiovisuales.multimedia')
+                ->with('error', 'Ese audiovisual no tiene un archivo de Slack asociado.');
+        }
+
+        try {
+            $slackFileUploader->delete($audiovisual->slack_file_id);
+        } catch (Throwable $exception) {
+            Log::error('Audiovisual Slack delete failed', [
+                'message' => $exception->getMessage(),
+                'audiovisual_id' => $audiovisual->id,
+                'user_id' => $request->user()?->id,
+                'slack_file_id' => $audiovisual->slack_file_id,
+            ]);
+
+            return back()->with('error', 'No se pudo eliminar el archivo en Slack.');
+        }
+
+        $estadoAnterior = $audiovisual->estado;
+
+        $audiovisual->forceFill([
+            'archivo_final_path' => null,
+            'archivo_final_original_name' => null,
+            'archivo_final_mime' => null,
+            'archivo_final_size' => null,
+            'slack_file_id' => null,
+            'slack_permalink' => null,
+            'slack_private_url' => null,
+        ])->save();
+
+        $this->registrarMovimiento(
+            $audiovisual,
+            'ARCHIVO_SLACK_ELIMINADO',
+            $estadoAnterior,
+            $audiovisual->estado,
+            'Archivo final eliminado de Slack y desvinculado del audiovisual.',
+        );
+
+        return redirect()
+            ->route('videografia.audiovisuales.multimedia')
+            ->with('success', 'Archivo eliminado de Slack correctamente.');
+    }
+
     protected function resolveTipoAudiovisual(?int $tipoAudiovisualId): ?TipoAudiovisual
     {
         if (! $tipoAudiovisualId) {

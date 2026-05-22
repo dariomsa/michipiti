@@ -63,6 +63,25 @@ class SlackFileUploader
         ];
     }
 
+    public function delete(string $fileId): void
+    {
+        $token = config('services.slack.bot_token');
+
+        if (! $token || trim($fileId) === '') {
+            throw new RuntimeException('Slack is not configured or the file id is missing.');
+        }
+
+        $response = $this->slack($token)
+            ->asForm()
+            ->post('https://slack.com/api/files.delete', [
+                'file' => $fileId,
+            ])
+            ->throw()
+            ->json();
+
+        $this->ensureSlackOk($response, 'files.delete');
+    }
+
     private function slack(string $token): PendingRequest
     {
         return Http::withToken($token)->acceptJson();

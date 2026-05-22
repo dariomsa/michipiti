@@ -163,8 +163,10 @@ Route::prefix('videografia')
         Route::post('/listado', [VideografiaAudiovisualController::class, 'store'])->name('audiovisuales.store');
         Route::get('/listado/{audiovisual}/edit', [VideografiaAudiovisualController::class, 'edit'])->name('audiovisuales.edit');
         Route::put('/listado/{audiovisual}', [VideografiaAudiovisualController::class, 'update'])->name('audiovisuales.update');
+        Route::delete('/listado/{audiovisual}/slack-media', [VideografiaAudiovisualController::class, 'destroySlackMedia'])->name('audiovisuales.slack-media.destroy');
         Route::post('/listado/{audiovisual}/mensajes', [VideografiaAudiovisualController::class, 'storeMessage'])->name('audiovisuales.mensajes.store');
         Route::get('/planificacion', [VideografiaPlanificadorController::class, 'index'])->name('audiovisuales.planificacion');
+        Route::get('/multimedia', [VideografiaAudiovisualController::class, 'multimedia'])->name('audiovisuales.multimedia');
         Route::get('/planificacion/week', [VideografiaPlanificadorController::class, 'week']);
         Route::get('/planificacion/responsables', [VideografiaPlanificadorController::class, 'responsables']);
         Route::post('/planificacion/store', [VideografiaPlanificadorController::class, 'store']);
