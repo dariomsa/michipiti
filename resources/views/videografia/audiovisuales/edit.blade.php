@@ -381,7 +381,7 @@
               <strong>{{ $audiovisual->editor?->name ?? '-' }}</strong>
             </div>
             <div class="product-meta-item">
-              <span class="product-meta-label">Enlace Canva</span>
+              <span class="product-meta-label">Enlace de video</span>
               <strong class="text-break">
                 @if($audiovisual->canva_url)
                   <a href="{{ $audiovisual->canva_url }}" target="_blank" rel="noopener">{{ $audiovisual->canva_url }}</a>
@@ -458,13 +458,13 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Enlace Canva</label>
-            <input type="text" name="canva_url" form="videoForm" class="form-control rounded-0" value="{{ old('canva_url', $audiovisual->canva_url) }}">
+            <label class="form-label">Enlace de video</label>
+            <input type="text" name="canva_url" form="videoForm" class="form-control rounded-0" value="{{ old('canva_url', $audiovisual->canva_url) }}" autocomplete="off">
           </div>
 
           <div class="mb-2">
             <label class="form-label">Archivo físico</label>
-            <input type="file" name="archivo_final" form="videoForm" class="form-control rounded-0">
+            <input type="file" name="archivo_final" form="videoForm" class="form-control rounded-0" autocomplete="off">
           </div>
 
           @if($archivoFinalUrl && $archivoFinalNombre)
