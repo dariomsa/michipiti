@@ -12,10 +12,10 @@ class SlackFileUploader
     public function upload(UploadedFile $file, string $title, string $initialComment = ''): array
     {
         $token = config('services.slack.bot_token');
-        $channelId = config('services.slack.channel_id');
+        $channelId = config('services.slack.channel_id') ?: config('services.slack.default_channel');
 
         if (! $token || ! $channelId) {
-            throw new RuntimeException('Slack is not configured. Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID.');
+            throw new RuntimeException('Slack is not configured. Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID or SLACK_DEFAULT_CHANNEL.');
         }
 
         $uploadTicket = $this->slack($token)

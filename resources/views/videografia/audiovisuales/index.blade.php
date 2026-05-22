@@ -188,6 +188,7 @@
                 if ($audiovisual->estado === 'PUBLICADO') $dotColor = '#1565c0';
 
                 $actionUrl = route('videografia.audiovisuales.edit', $audiovisual);
+                $finalLinkUrl = $audiovisual->canva_url ?: ($audiovisual->slack_permalink ?: $audiovisual->slack_private_url);
                 $puedeEditar = auth()->user()?->hasAnyRole(['videografia', 'video_manager', 'editor', 'director']);
                 $puedeVer = ! $puedeEditar;
               @endphp
@@ -268,6 +269,18 @@
                     <button class="btn btn-sm btn-outline-secondary" style="border-radius:0;" disabled>
                       <i class="bi bi-slash-circle"></i>
                     </button>
+                  @endif
+
+                  @if($audiovisual->estado === 'FINALIZADO' && $finalLinkUrl)
+                    <a href="{{ $finalLinkUrl }}"
+                       class="btn btn-sm btn-outline-success"
+                       style="border-radius:0;"
+                       target="_blank"
+                       rel="noopener"
+                       title="Abrir enlace"
+                       aria-label="Abrir enlace">
+                      Enlace
+                    </a>
                   @endif
                 </td>
               </tr>
