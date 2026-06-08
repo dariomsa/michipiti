@@ -41,6 +41,35 @@
     letter-spacing: -0.2px;
   }
 
+  .mundial-top{
+    border-bottom:3px solid #0b3d6b;
+    margin-bottom:18px;
+    padding-bottom:14px;
+  }
+
+  .mundial-brand{
+    color:#0b3d6b;
+    font-size:13px;
+    font-weight:800;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+  }
+
+  .mundial-title{
+    color:#0e1726;
+    font-family:Georgia, 'Times New Roman', serif;
+    font-size:clamp(30px,4.5vw,46px);
+    font-weight:700;
+    line-height:1;
+    margin:6px 0 4px;
+  }
+
+  .mundial-title em{
+    color:#b9551f;
+    font-style:italic;
+    font-weight:700;
+  }
+
   .btn-pill {
     border-radius: 999px;
   }
@@ -510,16 +539,25 @@
   }
 
   #slotModal .modal-dialog{
-    max-width: 760px;
+    max-width: 720px;
+    width: calc(100% - 1rem);
+  }
+
+  #slotModal .modal-content,
+  #slotModal form{
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   #slotModal .modal-header,
   #slotModal .modal-footer{
-    padding: .7rem .9rem;
+    padding: .55rem .75rem;
   }
 
   #slotModal .modal-body{
-    padding: .85rem .9rem;
+    overflow-x: hidden;
+    padding: .65rem .75rem;
   }
 
   #slotModal .modal-title{
@@ -532,31 +570,35 @@
   }
 
   #slotModal .row.g-3{
-    --bs-gutter-x: .75rem;
-    --bs-gutter-y: .6rem;
+    --bs-gutter-x: .55rem;
+    --bs-gutter-y: .45rem;
+  }
+
+  #slotModal .row > [class*="col-"]{
+    min-width: 0;
   }
 
   #slotModal .form-label{
     margin-bottom: .25rem;
-    font-size: .83rem;
+    font-size: .78rem;
     font-weight: 600;
   }
 
   #slotModal .form-control,
   #slotModal .form-select{
-    min-height: 34px;
-    height: 34px;
-    padding: .28rem .65rem;
-    font-size: .9rem;
+    min-height: 31px;
+    height: 31px;
+    padding: .22rem .5rem;
+    font-size: .84rem;
     border-radius: .35rem;
   }
 
   #slotModal textarea.form-control{
-    min-height: 78px;
+    min-height: 56px;
     height: auto;
-    padding-top: .45rem;
-    padding-bottom: .45rem;
-    line-height: 1.25;
+    padding-top: .35rem;
+    padding-bottom: .35rem;
+    line-height: 1.2;
   }
 
   #slotModal .invalid-feedback{
@@ -564,14 +606,15 @@
   }
 
   #slotModal .btn{
-    padding: .38rem .75rem;
-    font-size: .88rem;
+    padding: .32rem .62rem;
+    font-size: .82rem;
   }
 
   .social-grid{
     display:grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap:.12rem;
+    grid-template-columns: repeat(auto-fit, minmax(34px, 1fr));
+    gap:.14rem;
+    min-width: 0;
   }
 
   .social-grid.is-invalid{
@@ -594,7 +637,7 @@
     border:1px solid #cbd5e1;
     border-radius:.6rem;
     background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
-    min-height:32px;
+    min-height:29px;
     padding:.04rem;
     display:flex;
     align-items:center;
@@ -609,15 +652,15 @@
   }
 
   .social-card img{
-    width:20px;
-    height:20px;
+    width:18px;
+    height:18px;
     object-fit:contain;
     display:block;
     filter: drop-shadow(0 1px 1px rgba(15,23,42,.18));
   }
 
   .platform-card{
-    min-height:34px;
+    min-height:30px;
   }
 
   .platform-fallback{
@@ -666,6 +709,15 @@
   @media (max-width: 767.98px){
     .propuestas-wrap{
       padding: 0;
+    }
+
+    .mundial-brand{
+      font-size:11px;
+      letter-spacing:.16em;
+    }
+
+    .mundial-title{
+      font-size:30px;
     }
 
     :root{
@@ -735,9 +787,10 @@
 
 <div class="propuestas-wrap">
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="page-title m-0">Especial Mundial</h3>
-  </div>
+  <header class="mundial-top">
+    <div class="mundial-brand">EL COMERCIO · OPERATIVO MUNDIAL</div>
+    <h1 class="mundial-title">Calendario <em>Mundial 2026</em> · torneo completo</h1>
+  </header>
 
   <div class="toolbar mb-3">
     <div class="left flex-grow-1">
@@ -903,6 +956,11 @@
               <div class="invalid-feedback">Selecciona un tipo.</div>
             </div>
 
+            <div class="col-md-6 d-none" id="formAuspicioWrap">
+              <label class="form-label">Auspicio</label>
+              <input type="text" class="form-control" id="formAuspicio" name="auspicio" maxlength="600" placeholder="Marca o auspiciante">
+            </div>
+
             <div class="d-none" id="redesSocialesGrid"></div>
             <div class="invalid-feedback d-block d-none" id="redesSocialesError"></div>
 
@@ -965,10 +1023,6 @@
 
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
 
-        <button type="button" class="btn btn-primary d-none" id="toCarruselBtn">
-          <i class="bi bi-arrow-repeat me-1"></i> Cambiar a pauta
-        </button>
-
         <a href="#" class="btn btn-success d-none" id="canvaLinkBtn" target="_blank" rel="noopener noreferrer">
           <i class="bi bi-box-arrow-up-right me-1"></i> Ver Canva
         </a>
@@ -1012,6 +1066,8 @@
   const formMundialTipo = document.getElementById('formMundialTipo');
   const formTitle = document.getElementById('formTitle');
   const formDesc = document.getElementById('formDesc');
+  const formAuspicioWrap = document.getElementById('formAuspicioWrap');
+  const formAuspicio = document.getElementById('formAuspicio');
   const formStatus = document.getElementById('formStatus');
   const formTipoProducto = document.getElementById('formTipoProducto');
   const formResponsable = document.getElementById('formResponsable');
@@ -1025,7 +1081,6 @@
   const saveBtn = document.getElementById('saveSlotBtn');
   const newSameSlotBtn = document.getElementById('newSameSlotBtn');
   const approveBtn = document.getElementById('approveSlotBtn');
-  const toCarruselBtn = document.getElementById('toCarruselBtn');
   const deleteSlotBtn = document.getElementById('deleteSlotBtn');
   const canvaLinkBtn = document.getElementById('canvaLinkBtn');
 
@@ -1936,6 +1991,7 @@
     formMundialTipo.disabled = !fullEditable;
     formTitle.readOnly = !fullEditable;
     formDesc.readOnly = !fullEditable;
+    formAuspicio.readOnly = !fullEditable;
     formStatus.disabled = !fullEditable;
     formResponsable.disabled = !(fullEditable || pautaEditable);
     formResponsable2.disabled = !(fullEditable || pautaEditable);
@@ -1979,6 +2035,22 @@
     modalOutOfScheduleLabel.classList.toggle('d-none', allowed);
   }
 
+  function selectedTipoName(select){
+    return select.options[select.selectedIndex]?.textContent?.trim() || '';
+  }
+
+  function isComercialTipo(select){
+    return selectedTipoName(select).toLowerCase() === 'comercial';
+  }
+
+  function syncAuspicioVisibility(){
+    const show = isComercialTipo(formMundialTipo);
+    formAuspicioWrap.classList.toggle('d-none', !show);
+    if(!show){
+      formAuspicio.value = '';
+    }
+  }
+
   function toggleActionButtons(existing){
     const currentStatus = (formStatus.value || '').toUpperCase();
     const backendStatus = (existing.estado || '').toUpperCase();
@@ -1995,10 +2067,6 @@
     deleteSlotBtn.dataset.propuestaId = existing.id || '';
     deleteSlotBtn.dataset.key = existing.__key || '';
     deleteSlotBtn.classList.toggle('d-none', !existing.id || !existing.can_delete);
-
-    toCarruselBtn.dataset.propuestaId = existing.id || '';
-    toCarruselBtn.dataset.key = existing.__key || '';
-    toCarruselBtn.classList.toggle('d-none', !existing.id || existing.origen === 'pauta' || existing.origen === 'pendiente' || currentStatus === 'PENDIENTE');
 
     if(approveBtn){
       const showApprove = puedeAprobar && !!existing.id && (backendStatus === 'PENDIENTE' || existing.origen === 'pendiente');
@@ -2024,6 +2092,7 @@
     formMundialTipo.value = formMundialTipo.options[1]?.value || '';
     formTitle.value = '';
     formDesc.value = '';
+    formAuspicio.value = '';
     formTipoProducto.value = formTipoProducto.value || '';
     formResponsable.value = '';
     formResponsable2.value = '';
@@ -2032,12 +2101,12 @@
     setSelectedRedesSociales([]);
     syncPlataformasValidation(false);
     syncRedesSocialesValidation(false);
+    syncAuspicioVisibility();
     form.classList.remove('was-validated');
 
     modalTitle.textContent = 'Crear producto';
     setFormEditable('full');
     deleteSlotBtn.classList.add('d-none');
-    toCarruselBtn.classList.add('d-none');
     if(approveBtn){
       approveBtn.classList.add('d-none');
     }
@@ -2062,6 +2131,8 @@
     formTipoProducto.value = existing.tipo_producto_id || formTipoProducto.value || '';
 
     formDesc.value = existing.descripcion || '';
+    formAuspicio.value = existing.auspicio || existing.creditos || '';
+    syncAuspicioVisibility();
 
     if(existing.estado){
       formStatus.value = existing.estado;
@@ -2193,6 +2264,7 @@
       mundial_tipo_id: formMundialTipo.value ? Number(formMundialTipo.value) : null,
       titulo: formTitle.value.trim(),
       descripcion: formDesc.value.trim(),
+      auspicio: isComercialTipo(formMundialTipo) ? formAuspicio.value.trim() : null,
       estado: formStatus.value,
       tipo_producto_id: formTipoProducto.value ? Number(formTipoProducto.value) : null,
       redes_sociales_ids: getSelectedRedesSociales(),
@@ -2239,9 +2311,6 @@
 
     deleteSlotBtn.dataset.propuestaId = item.id || '';
     deleteSlotBtn.dataset.key = newKey;
-
-    toCarruselBtn.dataset.propuestaId = item.id || '';
-    toCarruselBtn.dataset.key = newKey;
 
     if(approveBtn){
       approveBtn.dataset.propuestaId = item.id || '';
@@ -2338,65 +2407,6 @@
     });
   }
 
-  toCarruselBtn?.addEventListener('click', async () => {
-    const propuestaId = Number(toCarruselBtn.dataset.propuestaId || 0);
-    const key = toCarruselBtn.dataset.key || '';
-    const responsableId = formResponsable.value ? Number(formResponsable.value) : null;
-
-    if(!propuestaId){
-      await showError('Primero guarda la propuesta.');
-      return;
-    }
-
-    if(!responsableId){
-      await showError('Selecciona un responsable antes de enviar a pauta.');
-      return;
-    }
-
-    const confirmation = await confirmAction('Enviar este producto a pauta y asignar un responsable?', 'Aceptar');
-    if(!confirmation.isConfirmed){
-      return;
-    }
-
-    try{
-      const res = await fetchJSON('/mundial', {
-        method: 'POST',
-        body: JSON.stringify({
-          propuesta_id: propuestaId,
-          asignado_a: responsableId
-        })
-      });
-
-      if(!res.ok){
-        await showError(res.message || 'No se pudo convertir.');
-        return;
-      }
-
-      const currentItem = findSlotItemById(key, propuestaId);
-      if(currentItem){
-        currentItem.origen = 'pauta';
-        currentItem.asignado_a = responsableId;
-        currentItem.responsable_nombre = formResponsable.options[formResponsable.selectedIndex]?.text || '';
-        currentItem.can_delete = false;
-      }
-
-      const td = document.querySelector(`.slot[data-key="${key}"]`);
-      if(td){
-        renderCellContent(td, slotData[key]);
-      }
-
-      updateHeaderCounters();
-      toCarruselBtn.classList.add('d-none');
-      applySearchFilter();
-      slotModal.hide();
-
-      await showSuccess('Producto enviado a pauta.');
-    }catch(error){
-      console.error(error);
-      await showError(getErrorMessage(error, 'No se pudo cambiar el producto a pauta.'));
-    }
-  });
-
   deleteSlotBtn?.addEventListener('click', async () => {
     const propuestaId = Number(deleteSlotBtn.dataset.propuestaId || 0);
     const key = deleteSlotBtn.dataset.key || '';
@@ -2433,7 +2443,6 @@
       updateHeaderCounters();
 
       deleteSlotBtn.classList.add('d-none');
-      toCarruselBtn.classList.add('d-none');
       if(approveBtn){
         approveBtn.classList.add('d-none');
       }
@@ -2479,6 +2488,7 @@
       syncRedesSocialesValidation(true);
     }
   });
+  formMundialTipo?.addEventListener('change', syncAuspicioVisibility);
 
   (async function init(){
     renderHeaders();

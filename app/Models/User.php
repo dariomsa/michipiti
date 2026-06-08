@@ -29,6 +29,7 @@ class User extends Authenticatable
         'email',
         'email_slack',
         'slack_user_id',
+        'usuarios_hijos',
         'password',
     ];
 
@@ -52,6 +53,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'usuarios_hijos' => 'array',
         ];
     }
 

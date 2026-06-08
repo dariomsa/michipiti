@@ -163,6 +163,7 @@ class PlanificadorController extends Controller
                 'mundial_tipo_id' => ['required', 'integer', Rule::exists('mundial_tipos', 'id')->where(fn ($query) => $query->where('activo', true))],
                 'titulo' => ['required', 'string', 'max:200'],
                 'descripcion' => ['nullable', 'string'],
+                'auspicio' => ['nullable', 'string', 'max:600'],
                 'estado' => ['nullable', 'string', 'max:30'],
                 'asignado_a' => ['nullable', 'integer', 'exists:users,id'],
                 'responsable2_id' => ['required', 'integer', 'exists:users,id'],
@@ -196,6 +197,7 @@ class PlanificadorController extends Controller
                 'mundial_tipo_id.exists' => 'El tipo seleccionado no es válido.',
                 'titulo.required' => 'Debes ingresar un título.',
                 'titulo.max' => 'El título no puede superar los 200 caracteres.',
+                'auspicio.max' => 'El auspicio no puede superar los 600 caracteres.',
                 'asignado_a.exists' => 'El líder seleccionado ya no existe.',
                 'responsable2_id.required' => 'Debes seleccionar un responsable.',
                 'responsable2_id.exists' => 'El responsable seleccionado ya no existe.',
@@ -217,6 +219,7 @@ class PlanificadorController extends Controller
                 'tipo_producto_id' => 'tipo de producto',
                 'redes_sociales_ids' => 'redes sociales',
                 'etapa' => 'etapa',
+                'auspicio' => 'auspicio',
             ],
         );
 
@@ -252,6 +255,8 @@ class PlanificadorController extends Controller
         $mundialPlataforma = $mundialPlataformas->first();
         $mundialEquipo = MundialEquipo::query()->findOrFail($data['mundial_equipo_id']);
         $mundialTipo = MundialTipo::query()->findOrFail($data['mundial_tipo_id']);
+        $isComercial = strcasecmp($mundialTipo->nombre, 'Comercial') === 0;
+        $auspicio = $isComercial ? ($data['auspicio'] ?? null) : null;
 
         if ($producto->exists && $producto->origen === 'pauta') {
             $seIntentoEditarCampoBloqueado =
@@ -261,6 +266,7 @@ class PlanificadorController extends Controller
                 ((int) $producto->mundial_tipo_id !== (int) $data['mundial_tipo_id']) ||
                 ($producto->titulo !== $data['titulo']) ||
                 (($producto->copy ?? '') !== ($data['descripcion'] ?? '')) ||
+                (($producto->creditos ?? '') !== ($auspicio ?? '')) ||
                 ((int) $producto->tipo_producto_id !== (int) $data['tipo_producto_id']) ||
                 ($producto->origen !== $origen);
 
@@ -291,6 +297,7 @@ class PlanificadorController extends Controller
             'seccion' => $mundialEquipo->nombre,
             'copy' => $data['descripcion'] ?? null,
             'referencia' => $data['etapa'] ?? 'Borrador',
+            'creditos' => $auspicio,
             'estado' => $data['estado'] ?: ($producto->estado ?: 'BORRADOR'),
             'prioridad' => $mundialPrioridad->nombre,
             'dificultad' => $producto->dificultad ?: 'BASICO',
@@ -656,6 +663,8 @@ class PlanificadorController extends Controller
             'hora' => $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : null,
             'titulo' => $producto->titulo,
             'descripcion' => $producto->copy,
+            'auspicio' => $producto->creditos,
+            'creditos' => $producto->creditos,
             'seccion' => $producto->seccion,
             'estado' => $producto->estado,
             'origen' => $producto->origen,
@@ -791,6 +800,7 @@ class PlanificadorController extends Controller
             $clon->seccion = $producto->seccion;
             $clon->copy = $producto->copy;
             $clon->referencia = $producto->referencia;
+            $clon->creditos = $producto->creditos;
             $clon->estado = $producto->estado;
             $clon->prioridad = $producto->prioridad;
             $clon->dificultad = $producto->dificultad;

@@ -49,9 +49,14 @@
   .chip.on{background:var(--blue);border-color:var(--blue);color:#fff;}
 
   .date-group{margin-top:28px;}
-  .date-head{align-items:baseline;border-bottom:1px solid var(--line);display:flex;gap:12px;margin-bottom:14px;padding-bottom:6px;}
+  .date-head{align-items:center;border-bottom:1px solid var(--line);display:flex;gap:12px;justify-content:space-between;margin-bottom:14px;padding-bottom:6px;}
+  .date-head-title{align-items:baseline;display:flex;gap:12px;min-width:0;}
   .date-head .name{font-family:Georgia, 'Times New Roman', serif;font-size:22px;font-weight:700;}
   .date-head .count{color:var(--muted);font-size:12.5px;}
+  .date-nav{align-items:center;display:flex;gap:6px;flex-shrink:0;}
+  .date-nav .btn-date{align-items:center;background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--blue);display:inline-flex;font-size:12px;font-weight:800;height:30px;justify-content:center;min-width:30px;padding:0 10px;text-decoration:none;}
+  .date-nav .btn-date:hover{border-color:var(--blue2);color:var(--blue2);}
+  .date-nav input{background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--ink);font-size:12px;font-weight:700;height:30px;padding:0 8px;width:128px;}
   .mrow{display:grid;grid-template-columns:78px 1fr;gap:14px;margin-bottom:11px;}
   .mtime{border-right:2px solid var(--line);padding-right:12px;padding-top:13px;text-align:right;}
   .mtime b{display:block;font-family:Georgia, 'Times New Roman', serif;font-size:19px;line-height:1;}
@@ -78,12 +83,26 @@
   .tag.format{background:#f3eee6;color:#7a6a4d;}
   .meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;padding-left:6px;}
   .meta b{color:var(--muted);font-weight:800;}
+  .meta .sponsor-text{color:#b9812a;font-weight:800;}
   .empty{background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-style:italic;margin-top:18px;padding:40px;text-align:center;}
-  .platform-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.2rem;}
+  #mundialEditModal .modal-dialog{max-width:720px;width:calc(100% - 1rem);}
+  #mundialEditModal .modal-content,
+  #mundialEditModal form{max-width:100%;min-width:0;overflow-x:hidden;}
+  #mundialEditModal .modal-header,
+  #mundialEditModal .modal-footer{padding:.55rem .75rem;}
+  #mundialEditModal .modal-body{overflow-x:hidden;padding:.65rem .75rem;}
+  #mundialEditModal .row.g-3{--bs-gutter-x:.55rem;--bs-gutter-y:.45rem;}
+  #mundialEditModal .row > [class*="col-"]{min-width:0;}
+  #mundialEditModal .form-label{font-size:.78rem;font-weight:600;margin-bottom:.25rem;}
+  #mundialEditModal .form-control,
+  #mundialEditModal .form-select{border-radius:.35rem;font-size:.84rem;height:31px;min-height:31px;padding:.22rem .5rem;}
+  #mundialEditModal textarea.form-control{height:auto;line-height:1.2;min-height:56px;padding-bottom:.35rem;padding-top:.35rem;}
+  #mundialEditModal .btn{font-size:.82rem;padding:.32rem .62rem;}
+  .platform-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(34px,1fr));gap:.14rem;min-width:0;}
   .platform-check{position:relative;}
   .platform-check input{opacity:0;position:absolute;pointer-events:none;}
-  .platform-card{align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:.55rem;cursor:pointer;display:flex;font-size:.72rem;font-weight:800;justify-content:center;min-height:34px;padding:.15rem .25rem;text-align:center;}
-  .platform-card img{display:block;filter:drop-shadow(0 1px 1px rgba(15,23,42,.18));height:20px;object-fit:contain;width:20px;}
+  .platform-card{align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:.55rem;cursor:pointer;display:flex;font-size:.7rem;font-weight:800;justify-content:center;min-height:30px;padding:.1rem .2rem;text-align:center;}
+  .platform-card img{display:block;filter:drop-shadow(0 1px 1px rgba(15,23,42,.18));height:18px;object-fit:contain;width:18px;}
   .platform-fallback{color:#111827;font-size:.72rem;font-weight:800;line-height:1;}
   .platform-check input:checked + .platform-card{background:#dbeafe;border-color:#0d6efd;box-shadow:inset 0 0 0 1px #0d6efd;color:#0b3d6b;}
   .platform-grid.is-invalid{background:#fff5f5;border:1px solid #dc3545;border-radius:.55rem;padding:2px;}
@@ -92,6 +111,7 @@
     .mundial-page{margin:0;padding:18px 12px 34px;}
     .mundial-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
     .filter-label{width:100%;}
+    .date-head{align-items:flex-start;flex-direction:column;}
     .mrow{grid-template-columns:62px 1fr;gap:10px;}
   }
 </style>
@@ -126,6 +146,7 @@
                   'mundial_tipo_id' => $producto->mundial_tipo_id,
                   'titulo' => $producto->titulo,
                   'descripcion' => $producto->copy,
+                  'auspicio' => $producto->creditos,
                   'estado' => $producto->estado,
                   'asignado_a' => $producto->user_id,
                   'responsable2_id' => $producto->responsable2_id,
@@ -197,11 +218,38 @@
     </div>
 
     @forelse($productos->getCollection()->groupBy(fn ($producto) => optional($producto->fecha)->format('Y-m-d') ?: 'sin-fecha') as $fechaKey => $items)
-      @php $first = $items->first(); @endphp
+      @php
+        $first = $items->first();
+        $fechaGrupo = $first->fecha;
+        $fechaIso = optional($fechaGrupo)->format('Y-m-d');
+        $prevDate = $fechaGrupo ? $fechaGrupo->copy()->subDay()->format('Y-m-d') : null;
+        $nextDate = $fechaGrupo ? $fechaGrupo->copy()->addDay()->format('Y-m-d') : null;
+      @endphp
       <section class="date-group">
         <div class="date-head">
-          <span class="name">{{ $fmtDate($first->fecha) }}</span>
-          <span class="count">{{ $items->count() }} productos</span>
+          <div class="date-head-title">
+            <span class="name">{{ $fmtDate($first->fecha) }}</span>
+            <span class="count">{{ $items->count() }} productos</span>
+          </div>
+          @if($fechaIso)
+            <form class="date-nav" method="GET" action="{{ route('mundial.index') }}">
+              @foreach($filters as $filterKey => $filterValue)
+                @if($filterKey !== 'fecha' && $filterValue !== '' && $filterValue !== 0 && $filterValue !== null)
+                  <input type="hidden" name="{{ $filterKey }}" value="{{ $filterValue }}">
+                @endif
+              @endforeach
+              <a class="btn-date" href="{{ $chipUrl(['fecha' => $prevDate]) }}" aria-label="Día anterior">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+              <input type="date" name="fecha" value="{{ $fechaIso }}" onchange="this.form.submit()" aria-label="Seleccionar fecha">
+              <a class="btn-date" href="{{ $chipUrl(['fecha' => $nextDate]) }}" aria-label="Día siguiente">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+              @if($filters['fecha'] !== '')
+                <a class="btn-date" href="{{ $chipUrl(['fecha' => '']) }}">Todos</a>
+              @endif
+            </form>
+          @endif
         </div>
 
         @foreach($items as $producto)
@@ -254,6 +302,9 @@
                 @endif
                 @if($producto->copy)
                   <span><b>Nota:</b> {{ str($producto->copy)->limit(120) }}</span>
+                @endif
+                @if(strcasecmp($tipoNombre, 'Comercial') === 0 && $producto->creditos)
+                  <span><b>Auspicio:</b> <span class="sponsor-text">{{ $producto->creditos }}</span></span>
                 @endif
               </div>
             </article>
@@ -345,6 +396,10 @@
                 @endforeach
               </select>
             </div>
+            <div class="col-md-6 d-none" id="editAuspicioWrap">
+              <label class="form-label">Auspicio</label>
+              <input class="form-control" type="text" id="editAuspicio" maxlength="600" placeholder="Marca o auspiciante">
+            </div>
             <div class="col-12">
               <label class="form-label">Título</label>
               <input class="form-control" type="text" id="editTitulo" required>
@@ -402,6 +457,9 @@
   const saveMundialEditBtn = document.getElementById('saveMundialEditBtn');
   const editPlataformasGrid = document.getElementById('editPlataformasGrid');
   const editPlataformasError = document.getElementById('editPlataformasError');
+  const editMundialTipo = document.getElementById('editMundialTipo');
+  const editAuspicioWrap = document.getElementById('editAuspicioWrap');
+  const editAuspicio = document.getElementById('editAuspicio');
   const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
   let editUsersLoaded = false;
 
@@ -468,6 +526,22 @@
     return valid;
   }
 
+  function selectedTipoName(select){
+    return select.options[select.selectedIndex]?.textContent?.trim() || '';
+  }
+
+  function isComercialTipo(select){
+    return selectedTipoName(select).toLowerCase() === 'comercial';
+  }
+
+  function syncEditAuspicioVisibility(){
+    const show = isComercialTipo(editMundialTipo);
+    editAuspicioWrap.classList.toggle('d-none', !show);
+    if(!show){
+      editAuspicio.value = '';
+    }
+  }
+
   async function openEditModal(productId){
     const item = mundialEditItems[String(productId)] || mundialEditItems[productId];
     if(!item) return;
@@ -484,9 +558,11 @@
     document.getElementById('editPrioridad').value = item.mundial_prioridad_id || '';
     setEditPlataformas(item.mundial_plataformas_ids || []);
     document.getElementById('editEquipo').value = item.mundial_equipo_id || '';
-    document.getElementById('editMundialTipo').value = item.mundial_tipo_id || '';
+    editMundialTipo.value = item.mundial_tipo_id || '';
     document.getElementById('editTitulo').value = item.titulo || '';
     document.getElementById('editDescripcion').value = item.descripcion || '';
+    editAuspicio.value = item.auspicio || '';
+    syncEditAuspicioVisibility();
     document.getElementById('editLider').value = item.asignado_a || '';
     document.getElementById('editResponsable').value = item.responsable2_id || '';
     document.getElementById('editEdicion').value = item.edicion_id || '';
@@ -505,6 +581,7 @@
       syncEditPlataformasValidation(true);
     }
   });
+  editMundialTipo?.addEventListener('change', syncEditAuspicioVisibility);
 
   saveMundialEditBtn?.addEventListener('click', async () => {
     const hasPlataformas = syncEditPlataformasValidation(true);
@@ -526,9 +603,10 @@
           mundial_prioridad_id: Number(document.getElementById('editPrioridad').value),
           mundial_plataformas_ids: getEditPlataformas(),
           mundial_equipo_id: Number(document.getElementById('editEquipo').value),
-          mundial_tipo_id: Number(document.getElementById('editMundialTipo').value),
+          mundial_tipo_id: Number(editMundialTipo.value),
           titulo: document.getElementById('editTitulo').value.trim(),
           descripcion: document.getElementById('editDescripcion').value.trim(),
+          auspicio: isComercialTipo(editMundialTipo) ? editAuspicio.value.trim() : null,
           estado: document.getElementById('editEstado').value || 'BORRADOR',
           tipo_producto_id: Number(document.getElementById('editTipoProductoId').value),
           redes_sociales_ids: [],

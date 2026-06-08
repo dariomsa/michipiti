@@ -12,6 +12,7 @@ use App\Models\TipoProducto;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class ProductoController extends Controller
 {
@@ -23,6 +24,7 @@ class ProductoController extends Controller
             'plataforma' => (int) $request->query('plataforma', 0),
             'equipo' => (int) $request->query('equipo', 0),
             'tipo' => (int) $request->query('tipo', 0),
+            'fecha' => $request->filled('fecha') ? Carbon::parse($request->query('fecha'))->toDateString() : '',
         ];
 
         $tipos = MundialTipo::query()->where('activo', true)->orderBy('orden')->get(['id', 'nombre']);
@@ -47,6 +49,7 @@ class ProductoController extends Controller
                     $inner
                         ->where('titulo', 'like', "%{$q}%")
                         ->orWhere('copy', 'like', "%{$q}%")
+                        ->orWhere('creditos', 'like', "%{$q}%")
                         ->orWhere('seccion', 'like', "%{$q}%")
                         ->orWhereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', "%{$q}%"))
                         ->orWhereHas('responsable2', fn (Builder $userQuery) => $userQuery->where('name', 'like', "%{$q}%"));
@@ -61,7 +64,8 @@ class ProductoController extends Controller
                 });
             })
             ->when($filters['equipo'] > 0, fn (Builder $query) => $query->where('mundial_equipo_id', $filters['equipo']))
-            ->when($filters['tipo'] > 0, fn (Builder $query) => $query->where('mundial_tipo_id', $filters['tipo']));
+            ->when($filters['tipo'] > 0, fn (Builder $query) => $query->where('mundial_tipo_id', $filters['tipo']))
+            ->when($filters['fecha'] !== '', fn (Builder $query) => $query->whereDate('fecha', $filters['fecha']));
 
         $statsQuery = clone $baseQuery;
         $productos = $baseQuery
