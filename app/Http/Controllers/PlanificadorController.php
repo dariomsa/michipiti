@@ -638,7 +638,7 @@ class PlanificadorController extends Controller
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $data CONTROL GIT
      * @return array{creadas: list<string>, conflictos: list<string>}
      */
     private function replicarProductoEnEmpresas(Producto $producto, array $data, Request $request): array
