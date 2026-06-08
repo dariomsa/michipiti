@@ -10,6 +10,8 @@ use App\Http\Controllers\Editor\ProductoController as EditorProductoController;
 use App\Http\Controllers\CalendarioEspecialController;
 use App\Http\Controllers\HorarioSlotController;
 use App\Http\Controllers\Manager\ProductoController as ManagerProductoController;
+use App\Http\Controllers\Mundial\ProductoController as MundialProductoController;
+use App\Http\Controllers\Mundial\PlanificadorController as MundialPlanificadorController;
 use App\Http\Controllers\PautaController;
 use App\Http\Controllers\PlanificadorController;
 use App\Http\Controllers\Periodista\ProductoController as PeriodistaProductoController;
@@ -75,6 +77,16 @@ Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::post('/planificador/aprobar', [PlanificadorController::class, 'approve']);
     Route::post('/planificador/to-pauta', [PlanificadorController::class, 'toPauta']);
     Route::delete('/planificador/{producto}', [PlanificadorController::class, 'destroy']);
+    Route::get('/mundial/listado', [MundialProductoController::class, 'index'])->name('mundial.index');
+    Route::get('/mundial/planificador', [MundialPlanificadorController::class, 'index'])->name('mundial.planificador');
+    Route::get('/mundial/planificador/week', [MundialPlanificadorController::class, 'week']);
+    Route::get('/mundial/planificador/periodistas', [MundialPlanificadorController::class, 'periodistas']);
+    Route::get('/mundial/planificador/videografos', [MundialPlanificadorController::class, 'videografos']);
+    Route::post('/mundial/planificador/store', [MundialPlanificadorController::class, 'store']);
+    Route::post('/mundial/planificador/move', [MundialPlanificadorController::class, 'move']);
+    Route::post('/mundial/planificador/aprobar', [MundialPlanificadorController::class, 'approve']);
+    Route::post('/mundial/planificador/to-pauta', [MundialPlanificadorController::class, 'toPauta']);
+    Route::delete('/mundial/planificador/{producto}', [MundialPlanificadorController::class, 'destroy']);
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 

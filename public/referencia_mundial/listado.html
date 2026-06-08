@@ -1,0 +1,229 @@
+<!-- Dashboard del Día de la Inauguración - jueves 11 de junio - EL COMERCIO -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Día de la Inauguración · 11 jun · EL COMERCIO</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap');
+  :root{
+    --ink:#0e1726; --blue:#0B3D6B; --blue2:#16578f; --paper:#f4f1ea;
+    --card:#ffffff; --line:#e3ddd0; --muted:#6b6256;
+    --edit:#0B3D6B; --com:#b9551f; --gold:#caa24a; --green:#2f7d56; --hot:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Archivo',system-ui,sans-serif;
+    background-image:radial-gradient(circle at 12% 6%, rgba(11,61,107,.05), transparent 40%),
+      radial-gradient(circle at 88% 0%, rgba(185,85,31,.06), transparent 42%);}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+
+  header.top{border-bottom:3px solid var(--blue);padding-bottom:14px;margin-bottom:6px}
+  .brand{font-family:'Archivo';font-weight:700;letter-spacing:.22em;color:var(--blue);font-size:13px}
+  h1{font-family:'Fraunces';font-weight:600;font-size:clamp(28px,4.6vw,44px);line-height:1;margin:6px 0 0}
+  h1 em{font-style:italic;color:var(--com)}
+  .sub{color:var(--muted);font-size:14px;margin-top:8px;max-width:640px}
+  .keytimes{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .kt{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-size:13px}
+  .kt b{font-family:'Fraunces';color:var(--blue);font-size:16px;display:block;line-height:1.1}
+  .kt.hot b{color:var(--hot)}
+  .kt span{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+  .demoflag{display:inline-block;margin-top:10px;font-size:11.5px;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase;background:var(--gold);color:#3a2e0a;padding:4px 10px;border-radius:999px}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0 6px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat b{font-family:'Fraunces';font-size:24px;display:block;line-height:1}
+  .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .stat.e b{color:var(--edit)} .stat.c b{color:var(--com)}
+
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 4px}
+  .controls input{flex:1;min-width:170px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:inherit;font-size:14px;background:#fff}
+  .grp{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--ink);transition:.15s;white-space:nowrap}
+  .chip:hover{border-color:var(--blue2)}
+  .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .chip.on.com{background:var(--com);border-color:var(--com)}
+
+  .phase{margin-top:26px}
+  .phasehead{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:14px}
+  .phasehead .p{font-family:'Fraunces';font-weight:600;font-size:21px}
+  .phasehead .range{font-size:12.5px;color:var(--muted)}
+  .phasehead.hot .p{color:var(--hot)}
+
+  .row{display:grid;grid-template-columns:78px 1fr;gap:14px;margin-bottom:11px}
+  .time{text-align:right;padding-top:13px;border-right:2px solid var(--line);padding-right:12px}
+  .time b{font-family:'Fraunces';font-size:18px;display:block;line-height:1}
+  .time span{font-size:10.5px;color:var(--muted)}
+  .time.radio b{color:var(--green)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 15px;position:relative;overflow:hidden;transition:.15s}
+  .card:hover{transform:translateY(-1px);box-shadow:0 9px 22px -16px rgba(14,23,38,.45)}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--edit)}
+  .card.com::before{background:var(--com)}
+  .card.radio::before{background:var(--green)}
+  .chead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-left:6px}
+  .ptitle{font-family:'Fraunces';font-size:17px;font-weight:600;line-height:1.12;margin:0 0 7px}
+  .badge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:var(--edit);border-radius:6px;padding:3px 7px;white-space:nowrap}
+  .badge.com{background:var(--com)} .badge.radio{background:var(--green)}
+  .tags{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 9px;padding-left:6px}
+  .tag{font-size:10.5px;font-weight:600;letter-spacing:.03em;border-radius:6px;padding:3px 7px;background:#eef1f5;color:var(--blue);text-transform:uppercase}
+  .tag.f{background:#f3eee6;color:#7a6a4d}
+  .meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;padding-left:6px}
+  .meta b{color:var(--muted);font-weight:600}
+  .ausp{color:var(--gold);font-weight:700}
+  .empty{padding:40px;text-align:center;color:var(--muted);font-style:italic}
+  footer{margin-top:38px;border-top:1px solid var(--line);padding-top:14px;font-size:12px;color:var(--muted)}
+  footer b{color:var(--blue)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">EL COMERCIO · OPERATIVO MUNDIAL</div>
+    <h1>Día de la <em>Inauguración</em></h1>
+    <div class="sub">Jueves 11 de junio · México vs. Sudáfrica, Estadio Azteca. Ejemplo práctico de una jornada completa: hora, plataforma, responsable y tipo de contenido. Todas las horas en hora de Ecuador.</div>
+    <div class="keytimes">
+      <div class="kt"><b>12h30</b><span>Ceremonia de apertura</span></div>
+      <div class="kt hot"><b>14h00</b><span>Pitazo inicial</span></div>
+      <div class="kt"><b>4 reportes</b><span>Radios del grupo (Platinum / Quito)</span></div>
+      <div class="kt"><b>Jueves</b><span>Noche de EC-M@N</span></div>
+    </div>
+    <div class="demoflag">Simulación · ejemplo para el equipo</div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="controls">
+    <input id="q" placeholder="Buscar producto, responsable, equipo…">
+    <div class="grp" id="tipoFilters">
+      <button class="chip on" data-tipo="all">Todos</button>
+      <button class="chip" data-tipo="Editorial">Editorial</button>
+      <button class="chip com" data-tipo="Comercial">Comercial</button>
+    </div>
+  </div>
+  <div class="controls"><div class="grp" id="platFilters"></div></div>
+  <div class="controls"><div class="grp" id="teamFilters"></div></div>
+
+  <div id="board"></div>
+
+  <footer>
+    Simulación construida sobre la estructura del tablero real (Airtable). En vivo, cada tarjeta es un registro editable y el equipo va sumando lo que surja en el día. <b>Editorial</b> en azul, <b>Comercial</b> en naranja, <b>Radio del grupo</b> en verde.
+  </footer>
+</div>
+
+<script>
+const D = [
+  // PREVIA / MAÑANA
+  {h:6.0, hl:"06h00", ph:"Previa · mañana", prod:"Home y minuto a minuto activados", fmt:"Web · especial", tipo:"Editorial", team:"Deportes", lider:"Carlos Rojas", resp:"Equipo Deportes", plat:["Web"], edit:"—", nota:"Portada de elcomercio.com abre con el especial de inauguración."},
+  {h:7.0, hl:"07h00", ph:"Previa · mañana", prod:"Galería del día desde NY/NJ", fmt:"Carrusel", tipo:"Comercial", team:"EE.UU.", lider:"Alexis Sinchire", resp:"Julio Estrella", plat:["Instagram","Web"], edit:"Julio (sede)", ausp:"Por cerrar", nota:"Arranque visual de la jornada."},
+  {h:8.0, hl:"08h00", ph:"Previa · mañana", prod:"Nota previa: todo sobre la inauguración", fmt:"Web", tipo:"Editorial", team:"Deportes", lider:"Carlos Rojas", resp:"Paulo Álvarez / Andrés Ávila", plat:["Web"], edit:"—", nota:"Para abrir el home temprano."},
+  {h:8.95, hl:"08h57", ph:"Previa · mañana", prod:"Reporte Ecuadoradio · 1ra emisión", fmt:"Radio 2 min", tipo:"Radio", team:"EE.UU.", lider:"Alexis Sinchire", resp:"Alexis Sinchire", plat:["Radio"], edit:"—", nota:"Platinum FM / Quito. Pregrabado o en vivo."},
+  {h:9.0, hl:"09h00", ph:"Previa · mañana", prod:"Promo Predictor del Mundial + Michiálbum", fmt:"Especial / App", tipo:"Comercial", team:"Multimedia", lider:"Ramón Núñez", resp:"Ramón Núñez", plat:["Web","Instagram"], edit:"—", nota:"Aplicativos al aire: empujar tráfico."},
+
+  // MEDIA MAÑANA
+  {h:10.0, hl:"10h00", ph:"Camino a la ceremonia", prod:"Camino a la inauguración: artistas y show", fmt:"Reel / Stories", tipo:"Editorial", team:"Tendencias", lider:"Carolina Castillo", resp:"Richard Jiménez", plat:["Instagram","TikTok"], edit:"Audiovisual EC", nota:"Espectáculo: alfombra, artistas, expectativa."},
+  {h:11.0, hl:"11h00", ph:"Camino a la ceremonia", prod:"Posteo de previa + alerta de canal", fmt:"Post / Broadcast", tipo:"Editorial", team:"Redes Sociales", lider:"Juan Carlos Ocaña", resp:"Kevin Puga / Doménica Jarrín", plat:["Facebook","WhatsApp"], edit:"—", nota:"Vía Metricool. Canal de WhatsApp activo todo el día."},
+  {h:11.5, hl:"11h30", ph:"Camino a la ceremonia", prod:"Lanzamiento: Mejor Jugador del Mundial", fmt:"Especial / IA", tipo:"Comercial", team:"Multimedia", lider:"Ramón Núñez", resp:"Ramón Núñez", plat:["Web","Instagram"], edit:"—", nota:"Estreno del tercer aplicativo, al arrancar el torneo."},
+  {h:11.66, hl:"11h40", ph:"Camino a la ceremonia", prod:"Reporte · De Nuevo las 9", fmt:"Radio 2 min", tipo:"Radio", team:"EE.UU.", lider:"Alexis Sinchire", resp:"Alejandra Vélez", plat:["Radio"], edit:"—", nota:"Platinum FM / Quito. Desde la sede."},
+
+  // CEREMONIA
+  {h:12.5, hl:"12h30", ph:"Ceremonia de apertura", prod:"Ceremonia en vivo · minuto a minuto", fmt:"Web en vivo", tipo:"Editorial", team:"Deportes", lider:"Carlos Rojas", resp:"Equipo Deportes", plat:["Web"], edit:"—", nota:"Cobertura escrita en vivo del show de apertura."},
+  {h:12.55, hl:"12h35", ph:"Ceremonia de apertura", prod:"Reels y stories del show", fmt:"Reel / Stories", tipo:"Editorial", team:"Tendencias", lider:"Carolina Castillo", resp:"Richard Jiménez", plat:["Instagram","TikTok"], edit:"Audiovisual EC", nota:"Espectáculo en tiempo real."},
+  {h:12.92, hl:"12h55", ph:"Ceremonia de apertura", prod:"Reporte Ecuadoradio · 2da emisión", fmt:"Radio 2 min", tipo:"Radio", team:"EE.UU.", lider:"Alexis Sinchire", resp:"María José Aguilar", plat:["Radio"], edit:"—", nota:"Platinum FM / Quito."},
+  {h:13.2, hl:"13h10", ph:"Ceremonia de apertura", prod:"Carrusel: lo mejor de la ceremonia", fmt:"Carrusel", tipo:"Editorial", team:"Tendencias", lider:"Carolina Castillo", resp:"Richard Jiménez + Diseño (Samuel)", plat:["Instagram"], edit:"—", nota:"Plantilla premium de Samuel."},
+
+  // PARTIDO
+  {h:14.0, hl:"14h00", ph:"Partido · México vs. Sudáfrica", prod:"Minuto a minuto del partido", fmt:"Web en vivo", tipo:"Editorial", team:"Deportes", lider:"Carlos Rojas", resp:"Equipo Deportes + Richard Velasco", plat:["Web"], edit:"—", nota:"Eje del home durante el partido."},
+  {h:14.05, hl:"14h00", ph:"Partido · México vs. Sudáfrica", prod:"Goles y jugadas clave", fmt:"Post / Reel", tipo:"Comercial", team:"Redes Sociales", lider:"Juan Carlos Ocaña", resp:"Kevin Puga / Doménica Jarrín", plat:["Instagram","TikTok","Facebook"], edit:"Audiovisual EC", ausp:"ECUABET", nota:"Publicación inmediata vía Metricool."},
+  {h:15.58, hl:"15h35", ph:"Partido · México vs. Sudáfrica", prod:"Reporte · Bendito Fútbol Mundial", fmt:"Radio 2 min", tipo:"Radio", team:"EE.UU.", lider:"Alexis Sinchire", resp:"Alexis Sinchire", plat:["Radio"], edit:"—", nota:"Platinum FM / Quito, en pleno partido."},
+
+  // POST-PARTIDO
+  {h:16.0, hl:"16h00", ph:"Post-partido", prod:"Crónica y resultado del partido", fmt:"Web", tipo:"Editorial", team:"Deportes", lider:"Carlos Rojas", resp:"Equipo Deportes", plat:["Web"], edit:"—", nota:"Cierre informativo del juego inaugural."},
+  {h:16.5, hl:"16h30", ph:"Post-partido", prod:"Resumen del partido", fmt:"Carrusel", tipo:"Comercial", team:"Redes Sociales", lider:"Juan Carlos Ocaña", resp:"Kevin Puga + Diseño (Samuel)", plat:["Instagram","Facebook"], edit:"Audiovisual EC", ausp:"Por cerrar", nota:"Diseño premium para sostener liderazgo."},
+  {h:17.0, hl:"17h00", ph:"Post-partido", prod:"Vox Populi / reacciones", fmt:"Reel", tipo:"Comercial", team:"Tendencias", lider:"Carolina Castillo", resp:"Santiago Estrella", plat:["Instagram","TikTok"], edit:"Audiovisual EC", ausp:"INDURAMA · BOSCH", nota:"Reacción de la gente al inicio del Mundial."},
+  {h:18.0, hl:"18h00", ph:"Post-partido", prod:"Querido diario desde NY/NJ", fmt:"Video 1 min", tipo:"Editorial", team:"EE.UU.", lider:"Alexis Sinchire", resp:"Equipo EE.UU.", plat:["Instagram","TikTok","YouTube"], edit:"Julio (sede)", nota:"Crónica del primer día del equipo en EE.UU."},
+
+  // NOCHE
+  {h:20.0, hl:"20h00", ph:"Noche", prod:"EC-M@N: No la metemos nunca", fmt:"Streaming", tipo:"Editorial", team:"EC-M@N", lider:"Marco Sánchez", resp:"Marco Sánchez", plat:["YouTube"], edit:"Audiovisual EC", nota:"Es jueves: streaming deportivo arranca el Mundial."},
+  {h:20.5, hl:"20h30", ph:"Noche", prod:"EC-M@N: Sin Datos y Sin WiFi", fmt:"Streaming", tipo:"Editorial", team:"EC-M@N", lider:"Marco Sánchez", resp:"Marco Sánchez", plat:["YouTube"], edit:"Audiovisual EC", nota:"Segundo streaming de la noche."},
+  {h:21.0, hl:"21h00", ph:"Noche", prod:"Cierre del día y agenda del 12", fmt:"Web / Post", tipo:"Editorial", team:"Web / Redes", lider:"Jorge Imbaquingo", resp:"Juan Carlos Ocaña", plat:["Web","Instagram","WhatsApp"], edit:"—", nota:"Lo más visto + qué viene mañana."},
+];
+
+const PLATS=["Web","Instagram","TikTok","Facebook","YouTube","WhatsApp","Radio"];
+const TEAMS=[...new Set(D.map(d=>d.team))];
+const PHASES=[
+  ["Previa · mañana","06h00 – 09h59"],
+  ["Camino a la ceremonia","10h00 – 12h29"],
+  ["Ceremonia de apertura","12h30 – 13h59"],
+  ["Partido · México vs. Sudáfrica","14h00 – 15h59"],
+  ["Post-partido","16h00 – 19h59"],
+  ["Noche","20h00 +"],
+];
+const HOT=new Set(["Partido · México vs. Sudáfrica","Ceremonia de apertura"]);
+let st={tipo:"all",plat:"all",team:"all",q:""};
+
+document.getElementById('platFilters').innerHTML =
+  `<button class="chip on" data-plat="all">Toda plataforma</button>`+PLATS.map(p=>`<button class="chip" data-plat="${p}">${p}</button>`).join("");
+document.getElementById('teamFilters').innerHTML =
+  `<button class="chip on" data-team="all">Todo equipo</button>`+TEAMS.map(t=>`<button class="chip" data-team="${t}">${t}</button>`).join("");
+
+function bind(id,key,attr){
+  document.getElementById(id).addEventListener('click',e=>{
+    const b=e.target.closest('.chip'); if(!b)return;
+    st[key]=b.getAttribute('data-'+attr);
+    [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); render();
+  });
+}
+bind('tipoFilters','tipo','tipo');
+bind('platFilters','plat','plat');
+bind('teamFilters','team','team');
+document.getElementById('q').addEventListener('input',e=>{st.q=e.target.value.toLowerCase();render();});
+
+function ok(d){
+  if(st.tipo!=="all" && d.tipo!==st.tipo) return false;
+  if(st.plat!=="all" && !d.plat.includes(st.plat)) return false;
+  if(st.team!=="all" && d.team!==st.team) return false;
+  if(st.q){const b=(d.prod+" "+d.resp+" "+d.lider+" "+d.team+" "+d.fmt).toLowerCase(); if(!b.includes(st.q))return false;}
+  return true;
+}
+
+function render(){
+  const items=D.filter(ok);
+  const ed=items.filter(d=>d.tipo==="Editorial").length;
+  const co=items.filter(d=>d.tipo==="Comercial").length;
+  const ra=items.filter(d=>d.tipo==="Radio").length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><b>${items.length}</b><span>Publicaciones del día</span></div>
+    <div class="stat e"><b>${ed}</b><span>Editorial</span></div>
+    <div class="stat c"><b>${co}</b><span>Comercial</span></div>
+    <div class="stat"><b>${ra}</b><span>Reportes de radio</span></div>`;
+
+  const board=document.getElementById('board');
+  if(!items.length){board.innerHTML=`<div class="empty">No hay nada con estos filtros.</div>`;return;}
+
+  board.innerHTML=PHASES.map(([name,range])=>{
+    const g=items.filter(d=>d.ph===name).sort((a,b)=>a.h-b.h);
+    if(!g.length) return "";
+    const head=`<div class="phasehead ${HOT.has(name)?'hot':''}"><span class="p">${name}</span><span class="range">${range}</span></div>`;
+    const rows=g.map(d=>{
+      const cls=d.tipo==="Comercial"?"com":(d.tipo==="Radio"?"radio":"");
+      const badge=d.tipo==="Comercial"?"com":(d.tipo==="Radio"?"radio":"");
+      return `<div class="row">
+        <div class="time ${d.tipo==='Radio'?'radio':''}"><b>${d.hl}</b><span>${d.tipo==='Radio'?'radio':d.plat[0]}</span></div>
+        <div class="card ${cls}">
+          <div class="chead"><p class="ptitle">${d.prod}</p><span class="badge ${badge}">${d.tipo}</span></div>
+          <div class="tags"><span class="tag f">${d.fmt}</span>${d.plat.map(p=>`<span class="tag">${p}</span>`).join("")}</div>
+          <div class="meta">
+            <span><b>Equipo:</b> ${d.team}</span>
+            <span><b>Lidera:</b> ${d.lider}</span>
+            <span><b>Responsable:</b> ${d.resp}</span>
+            ${d.edit&&d.edit!=="—"?`<span><b>Edición:</b> ${d.edit}</span>`:""}
+            ${d.ausp?`<span><b>Auspicio:</b> <span class="ausp">${d.ausp}</span></span>`:""}
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+    return `<div class="phase">${head}${rows}</div>`;
+  }).join("");
+}
+render();
+</script>

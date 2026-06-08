@@ -913,6 +913,11 @@
         ['label' => 'Multimedia', 'icon' => 'bi-collection-play', 'url' => route('videografia.audiovisuales.multimedia')],
     ];
 
+    $mundialMenu = $mundialMenu ?? [
+        ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => route('mundial.index')],
+        ['label' => 'Planificación', 'icon' => 'bi-trophy', 'url' => route('mundial.planificador')],
+    ];
+
     $layoutMenu = $layoutMenu ?? array_values(array_filter([
         $showDashboard ? ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'url' => route('dashboard')] : null,
         ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => $listadoUrl],
@@ -1062,6 +1067,29 @@
 
                 <ul class="sidebar-nav">
                     @foreach($audiovisualesMenu as $item)
+                        @php
+                            $href = $item['url'] ?? '#';
+                            $active = $href !== '#' && url()->current() === $href;
+                        @endphp
+
+                        <li>
+                            <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
+                                <i class="bi {{ $item['icon'] }}"></i>
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+
+            @if($mundialMenu !== [])
+                <div class="sidebar-title pt-3">
+                    <i class="bi bi-trophy"></i>
+                    <span>Especial Mundial</span>
+                </div>
+
+                <ul class="sidebar-nav">
+                    @foreach($mundialMenu as $item)
                         @php
                             $href = $item['url'] ?? '#';
                             $active = $href !== '#' && url()->current() === $href;
