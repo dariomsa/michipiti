@@ -772,7 +772,7 @@
 
 @php
   $puedeAprobar = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
-  $puedeDragDrop = auth()->user() && auth()->user()->hasRole('director');
+  $puedeDragDrop = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
   $plataformaIconMap = [
       'facebook' => 'facebook',
       'instagram' => 'instagram',
@@ -1546,6 +1546,9 @@
         'slot-dragging'
       );
     });
+    document.querySelectorAll('.slot-wrap.slot-dragging').forEach(card => {
+      card.classList.remove('slot-dragging');
+    });
   }
 
   function setDragOverlayVisible(visible){
@@ -1571,6 +1574,17 @@
       item: slotItems(slotData[td.dataset.key || ''])[0] || null,
       items: slotItems(slotData[td.dataset.key || '']),
       td
+    };
+  }
+
+  function getDragSourceFromItem(td, item){
+    const slot = getSlotFromCell(td);
+    if(!slot || !item) return null;
+
+    return {
+      ...slot,
+      item,
+      productoId: Number(item.id || 0)
     };
   }
 
@@ -1605,8 +1619,6 @@
     if(source.key === target.key) return false;
 
     if(!canMoveItemToSlot(source.item, target)) return false;
-
-    if((target.items || []).length > 0) return false;
 
     return true;
   }
@@ -1688,12 +1700,12 @@
       td.classList.add('slot-draggable');
 
       td.ondragstart = (e) => {
-        dragSource = getSlotFromCell(td);
+        dragSource = getDragSourceFromItem(td, items[0]);
         isDragging = true;
         td.classList.add('slot-dragging');
         setDragOverlayVisible(true);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', dragSource.key);
+        e.dataTransfer.setData('text/plain', `${dragSource.key}|${dragSource.productoId}`);
       };
 
       td.ondragend = () => {
@@ -1712,6 +1724,33 @@
     wrap.className = 'slot-wrap';
     if(compact){
       wrap.classList.add('slot-item', slotBorderClass(data));
+    }
+
+    if(compact && isDraggableItem(data)){
+      wrap.draggable = true;
+      wrap.classList.add('slot-draggable');
+      wrap.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
+        const td = wrap.closest('.slot');
+        dragSource = getDragSourceFromItem(td, data);
+        if(!dragSource){
+          return;
+        }
+        isDragging = true;
+        wrap.classList.add('slot-dragging');
+        td?.classList.add('slot-dragging');
+        setDragOverlayVisible(true);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', `${dragSource.key}|${dragSource.productoId}`);
+      });
+      wrap.addEventListener('dragend', () => {
+        wrap.classList.remove('slot-dragging');
+        clearDropStates();
+        setTimeout(() => {
+          isDragging = false;
+          dragSource = null;
+        }, 0);
+      });
     }
 
     const topLine = document.createElement('div');
@@ -2326,6 +2365,7 @@
     const res = await fetchJSON('/mundial/planificador/move', {
       method: 'POST',
       body: JSON.stringify({
+        producto_id: source.productoId || source.item.id,
         source_key: source.key,
         target_key: target.key
       })

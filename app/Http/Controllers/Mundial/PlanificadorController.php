@@ -409,19 +409,22 @@ class PlanificadorController extends Controller
 
     public function move(Request $request): JsonResponse
     {
-        if (! $request->user()->hasRole('director')) {
+        if (! $request->user()->hasAnyRole(['editor', 'director'])) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Solo el director puede mover productos desde el planificador.',
+                'message' => 'Solo los roles editor y director pueden mover productos desde el planificador.',
             ], Response::HTTP_FORBIDDEN);
         }
 
         $data = $request->validate(
             [
+                'producto_id' => ['required', 'integer', 'exists:mundial_productos,id'],
                 'source_key' => ['required', 'string'],
                 'target_key' => ['required', 'string'],
             ],
             [
+                'producto_id.required' => 'No se recibió el producto a mover.',
+                'producto_id.exists' => 'El producto que intentas mover ya no existe.',
                 'source_key.required' => 'No se recibió el slot de origen.',
                 'target_key.required' => 'No se recibió el slot de destino.',
             ],
@@ -437,19 +440,18 @@ class PlanificadorController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $source = MundialProducto::query()
-            ->whereDate('fecha', $sourceDate)
-            ->whereTime('hora', $sourceTime)
-            ->firstOrFail();
+        $source = MundialProducto::query()->findOrFail($data['producto_id']);
         $sourceOriginalDate = optional($source->fecha)->format('Y-m-d');
         $sourceOriginalTime = $source->hora ? Carbon::parse($source->hora)->format('H:i') : null;
         $sourceEstadoAnterior = $source->estado;
         $sourceCanMoveToTarget = $this->isAllowedSchedule($targetDate, $targetTime) || $source->origen === 'pauta';
 
-        $target = MundialProducto::query()
-            ->whereDate('fecha', $targetDate)
-            ->whereTime('hora', $targetTime)
-            ->first();
+        if ($sourceOriginalDate !== $sourceDate || $sourceOriginalTime !== $sourceTime) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El producto ya no está en el horario de origen. Recarga el planificador e intenta nuevamente.',
+            ], Response::HTTP_CONFLICT);
+        }
 
         if (! $sourceCanMoveToTarget) {
             return response()->json([
@@ -458,85 +460,27 @@ class PlanificadorController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if ($target) {
-            $targetOriginalDate = optional($target->fecha)->format('Y-m-d');
-            $targetOriginalTime = $target->hora ? Carbon::parse($target->hora)->format('H:i') : null;
-            $targetEstadoAnterior = $target->estado;
-            $targetCanMoveToSource = $this->isAllowedSchedule($sourceOriginalDate, $sourceOriginalTime) || $target->origen === 'pauta';
+        $source->update([
+            'fecha' => $targetDate,
+            'hora' => $targetTime,
+            'orden_dia' => $this->orderDiaFromTime($targetTime),
+        ]);
 
-            if (! $targetCanMoveToSource) {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'El intercambio no es válido porque uno de los productos quedaría fuera de pauta sin estar en pauta.',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-
-            $source->update([
-                'fecha' => $targetDate,
-                'hora' => $targetTime,
-                'orden_dia' => $this->orderDiaFromTime($targetTime),
-            ]);
-
-            $target->update([
-                'fecha' => $sourceOriginalDate,
-                'hora' => $sourceOriginalTime,
-                'orden_dia' => $this->orderDiaFromTime($sourceOriginalTime),
-            ]);
-
-            $this->registrarMovimiento(
-                producto: $source->fresh(),
-                user: $request->user(),
-                accion: 'MOVIDO_PLANIFICADOR',
-                estadoAnterior: $sourceEstadoAnterior,
-                estadoNuevo: $sourceEstadoAnterior,
-                motivo: 'Producto movido desde el planificador.',
-                meta: [
-                    'fecha_anterior' => $sourceOriginalDate,
-                    'hora_anterior' => $sourceOriginalTime,
-                    'fecha_nueva' => $targetDate,
-                    'hora_nueva' => $targetTime,
-                    'intercambio' => true,
-                ],
-            );
-
-            $this->registrarMovimiento(
-                producto: $target->fresh(),
-                user: $request->user(),
-                accion: 'MOVIDO_PLANIFICADOR',
-                estadoAnterior: $targetEstadoAnterior,
-                estadoNuevo: $targetEstadoAnterior,
-                motivo: 'Producto reubicado por intercambio desde el planificador.',
-                meta: [
-                    'fecha_anterior' => $targetOriginalDate,
-                    'hora_anterior' => $targetOriginalTime,
-                    'fecha_nueva' => $sourceOriginalDate,
-                    'hora_nueva' => $sourceOriginalTime,
-                    'intercambio' => true,
-                ],
-            );
-        } else {
-            $source->update([
-                'fecha' => $targetDate,
-                'hora' => $targetTime,
-                'orden_dia' => $this->orderDiaFromTime($targetTime),
-            ]);
-
-            $this->registrarMovimiento(
-                producto: $source->fresh(),
-                user: $request->user(),
-                accion: 'MOVIDO_PLANIFICADOR',
-                estadoAnterior: $sourceEstadoAnterior,
-                estadoNuevo: $sourceEstadoAnterior,
-                motivo: 'Producto movido desde el planificador.',
-                meta: [
-                    'fecha_anterior' => $sourceOriginalDate,
-                    'hora_anterior' => $sourceOriginalTime,
-                    'fecha_nueva' => $targetDate,
-                    'hora_nueva' => $targetTime,
-                    'intercambio' => false,
-                ],
-            );
-        }
+        $this->registrarMovimiento(
+            producto: $source->fresh(),
+            user: $request->user(),
+            accion: 'MOVIDO_PLANIFICADOR',
+            estadoAnterior: $sourceEstadoAnterior,
+            estadoNuevo: $sourceEstadoAnterior,
+            motivo: 'Producto movido desde el planificador.',
+            meta: [
+                'fecha_anterior' => $sourceOriginalDate,
+                'hora_anterior' => $sourceOriginalTime,
+                'fecha_nueva' => $targetDate,
+                'hora_nueva' => $targetTime,
+                'intercambio' => false,
+            ],
+        );
 
         return response()->json(['ok' => true]);
     }
