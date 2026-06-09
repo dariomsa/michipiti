@@ -1059,6 +1059,7 @@
                 @endforeach
             </ul>
 
+            {{-- Menú Audiovisuales oculto temporalmente.
             @if($audiovisualesMenu !== [])
                 <div class="sidebar-title pt-3">
                     <i class="bi bi-camera-reels"></i>
@@ -1081,6 +1082,7 @@
                     @endforeach
                 </ul>
             @endif
+            --}}
 
             @if($mundialMenu !== [])
                 <div class="sidebar-title pt-3">

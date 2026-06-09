@@ -16,6 +16,8 @@ use Illuminate\Support\Carbon;
 
 class ProductoController extends Controller
 {
+    private const START_DATE = '2026-06-08';
+
     public function index(Request $request): View
     {
         $filters = [
@@ -65,6 +67,7 @@ class ProductoController extends Controller
             })
             ->when($filters['equipo'] > 0, fn (Builder $query) => $query->where('mundial_equipo_id', $filters['equipo']))
             ->when($filters['tipo'] > 0, fn (Builder $query) => $query->where('mundial_tipo_id', $filters['tipo']))
+            ->whereDate('fecha', '>=', self::START_DATE)
             ->when($filters['fecha'] !== '', fn (Builder $query) => $query->whereDate('fecha', $filters['fecha']));
 
         $statsQuery = clone $baseQuery;

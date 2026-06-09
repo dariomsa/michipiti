@@ -408,6 +408,12 @@
     color:#2f7d56;
   }
 
+  .slot-type-michipiti{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+    color:#334155;
+  }
+
   .slot-border-editorial{
     border-color:#0b3d6b !important;
     box-shadow: inset 0 0 0 1px rgba(11,61,107,.28);
@@ -423,9 +429,15 @@
     box-shadow: inset 0 0 0 1px rgba(47,125,86,.28);
   }
 
+  .slot-border-michipiti{
+    border-color:#64748b !important;
+    box-shadow: inset 0 0 0 1px rgba(100,116,139,.28);
+  }
+
   .slot-item.slot-border-editorial,
   .slot-item.slot-border-comercial,
-  .slot-item.slot-border-radio{
+  .slot-item.slot-border-radio,
+  .slot-item.slot-border-michipiti{
     box-shadow:none;
     border-left-width:4px;
   }
@@ -779,6 +791,15 @@
           ];
       })
       ->all();
+  $redesSocialesMap = $redesSociales
+      ->mapWithKeys(fn ($redSocial) => [
+          $redSocial->id => [
+              'nombre' => $redSocial->nombre,
+              'icon' => asset('images/redes-sociales/'.$redSocial->slug.'.svg'),
+              'fallback' => strtoupper(substr($redSocial->nombre, 0, 2)),
+          ],
+      ])
+      ->all();
 	  
 	  
 	   
@@ -1045,6 +1066,7 @@
   const baseVisibleSchedule = @json($baseVisibleSchedule);
   const specialScheduleByDate = @json($specialScheduleByDate);
   const mundialPlataformasMap = @json($mundialPlataformasMap);
+  const redesSocialesMap = @json($redesSocialesMap);
 
   const tbody = document.getElementById('calendarBody');
   const slotModalEl = document.getElementById('slotModal');
@@ -1156,7 +1178,7 @@
   function buildWeekSignature(items){
     return JSON.stringify(
       (items || []).map(item => [
-        Number(item.id || 0),
+        item.uid || `${item.source || 'mundial'}:${item.id || 0}`,
         item.fecha || '',
         (item.hora || '').slice(0, 5),
         item.estado || '',
@@ -1197,12 +1219,16 @@
     const id = Number(itemId || 0);
     if(!id) return null;
 
-    return Object.keys(slotData).find(key => slotItems(slotData[key]).some(item => Number(item.id || 0) === id)) || null;
+    return Object.keys(slotData).find(key => slotItems(slotData[key]).some(item => !isMichipitiItem(item) && Number(item.id || 0) === id)) || null;
   }
 
   function findSlotItemById(key, itemId){
     const id = Number(itemId || 0);
-    return slotItems(slotData[key]).find(item => Number(item.id || 0) === id) || null;
+    return slotItems(slotData[key]).find(item => !isMichipitiItem(item) && Number(item.id || 0) === id) || null;
+  }
+
+  function findSlotItemByUid(key, uid){
+    return slotItems(slotData[key]).find(item => String(item.uid || `${item.source || 'mundial'}:${item.id}`) === String(uid)) || null;
   }
 
   function isAllowedHour(dayIndex, hour){
@@ -1450,6 +1476,10 @@
   }
 
   function getStatusClass(data){
+    if(isMichipitiItem(data)){
+      return 'slot-default-busy';
+    }
+
     const status = (data?.estado || '').toUpperCase();
     const origen = (data?.origen || '').toLowerCase();
 
@@ -1534,15 +1564,21 @@
     return !!(item && (item.titulo || item.copy || item.seccion));
   }
 
+  function isMichipitiItem(item){
+    return String(item?.source || '').toLowerCase() === 'michipiti';
+  }
+
   function isDraggableItem(item){
     if(!puedeDragDrop) return false;
     if(!item) return false;
+    if(isMichipitiItem(item)) return false;
     if(!hasRenderableItem(item)) return false;
     return !!item.id;
   }
 
   function canMoveItemToSlot(item, slot){
     if(!item || !slot) return false;
+    if(isMichipitiItem(item)) return false;
     if(slot.td?.dataset.past === '1') return false;
 
     const origen = String(item.origen || '').toLowerCase();
@@ -1578,6 +1614,7 @@
       'slot-border-editorial',
       'slot-border-comercial',
       'slot-border-radio',
+      'slot-border-michipiti',
       'slot-drop-target',
       'slot-drop-target-empty',
       'slot-drop-target-busy',
@@ -1601,15 +1638,15 @@
 
     td.title = items.map(data => [
       `Titulo: ${data.titulo || data.seccion || 'Contenido'}`,
+      `Origen: ${isMichipitiItem(data) ? 'Producto Michipiti' : 'Especial Mundial'}`,
       `Prioridad: ${data.mundial_prioridad_nombre || data.prioridad || 'Sin prioridad'}`,
       `Plataforma: ${data.mundial_plataforma_nombre || 'Sin plataforma'}`,
       `Equipo: ${data.mundial_equipo_nombre || data.seccion || 'Sin equipo'}`,
-      `Tipo: ${data.mundial_tipo_nombre || 'Sin tipo'}`,
+      `Tipo: ${data.mundial_tipo_nombre || data.tipo_producto_nombre || 'Sin tipo'}`,
       `Líder: ${data.responsable_nombre || 'Sin líder'}`,
-      `Responsable: ${data.responsable2_nombre || 'Sin responsable'}`,
+      `Responsable: ${data.responsable_nombre || 'Sin responsable'}`,
       `Edición: ${data.edicion_nombre || 'Sin edición'}`,
-      `Etapa: ${data.etapa || 'Borrador'}`,
-      `Estado: ${data.estado || 'BORRADOR'}`,
+      isMichipitiItem(data) ? `Estado: ${data.estado || 'BORRADOR'}` : `Etapa: ${data.etapa || 'Borrador'}`,
     ].join('\n')).join('\n\n');
 
     const outer = document.createElement('div');
@@ -1669,30 +1706,35 @@
     title.textContent = data.titulo || data.seccion || 'Contenido';
 
     const tipo = String(data.mundial_tipo_nombre || '').toLowerCase();
-    const tipoClass = tipo === 'comercial'
-      ? 'slot-type-comercial'
-      : (tipo === 'radio' ? 'slot-type-radio' : 'slot-type-editorial');
+    const tipoClass = isMichipitiItem(data)
+      ? 'slot-type-michipiti'
+      : (tipo === 'comercial'
+        ? 'slot-type-comercial'
+        : (tipo === 'radio' ? 'slot-type-radio' : 'slot-type-editorial'));
     const badge = document.createElement('span');
     badge.className = `slot-origin-badge ${tipoClass}`;
-    badge.textContent = data.mundial_tipo_nombre || 'Editorial';
+    badge.textContent = isMichipitiItem(data) ? 'Michipiti' : (data.mundial_tipo_nombre || 'Editorial');
 
     const meta = document.createElement('div');
     meta.className = 'slot-meta';
     meta.textContent = [
-      data.estado || 'BORRADOR',
+      isMichipitiItem(data) ? (data.estado || 'BORRADOR') : (data.etapa || 'Borrador'),
       data.mundial_equipo_nombre || data.seccion || 'Sin equipo',
-      data.responsable2_nombre || 'Sin responsable'
+      data.responsable_nombre || data.responsable2_nombre || 'Sin responsable'
     ].filter(Boolean).join(' • ');
 
     const socialFooter = document.createElement('div');
     socialFooter.className = 'slot-social-footer';
 
-    const plataformaIds = Array.isArray(data.mundial_plataformas_ids)
-      ? data.mundial_plataformas_ids
-      : (data.mundial_plataforma_id ? [data.mundial_plataforma_id] : []);
+    const socialIds = isMichipitiItem(data)
+      ? (Array.isArray(data.redes_sociales_ids) ? data.redes_sociales_ids : [])
+      : (Array.isArray(data.mundial_plataformas_ids)
+        ? data.mundial_plataformas_ids
+        : (data.mundial_plataforma_id ? [data.mundial_plataforma_id] : []));
+    const socialMap = isMichipitiItem(data) ? redesSocialesMap : mundialPlataformasMap;
 
-    plataformaIds.slice(0, 5).forEach(plataformaId => {
-      const plataforma = mundialPlataformasMap[String(plataformaId)] || mundialPlataformasMap[plataformaId];
+    socialIds.slice(0, 5).forEach(socialId => {
+      const plataforma = socialMap[String(socialId)] || socialMap[socialId];
       if(!plataforma) return;
 
       if(plataforma.icon){
@@ -1722,6 +1764,10 @@
   }
 
   function slotBorderClass(data){
+    if(isMichipitiItem(data)){
+      return 'slot-border-michipiti';
+    }
+
     const tipo = String(data?.mundial_tipo_nombre || '').toLowerCase();
 
     if(tipo === 'comercial'){
@@ -2160,9 +2206,10 @@
 
   async function chooseSlotItem(items, fecha, hourValue){
     const options = items.map(item => {
-      const tipo = item.mundial_tipo_nombre || 'Tipo';
+      const tipo = isMichipitiItem(item) ? 'Michipiti' : (item.mundial_tipo_nombre || 'Tipo');
       const title = item.titulo || item.seccion || `Producto #${item.id}`;
-      return `<option value="${Number(item.id)}">${escapeHTML(tipo)} · ${escapeHTML(title)}</option>`;
+      const uid = item.uid || `${item.source || 'mundial'}:${item.id}`;
+      return `<option value="${escapeHTML(uid)}">${escapeHTML(tipo)} · ${escapeHTML(title)}</option>`;
     }).join('');
 
     const result = await Swal.fire({
@@ -2182,10 +2229,41 @@
     }
 
     if(result.isConfirmed && result.value){
-      return { action: 'edit', itemId: Number(result.value) };
+      return { action: 'open', uid: result.value };
     }
 
     return { action: 'cancel' };
+  }
+
+  async function showMichipitiProductModal(item, fecha, hourValue, allowed, key){
+    const redes = (Array.isArray(item.redes_sociales_ids) ? item.redes_sociales_ids : [])
+      .map(redId => redesSocialesMap[String(redId)] || redesSocialesMap[redId])
+      .filter(Boolean)
+      .map(red => escapeHTML(red.nombre || 'Red social'))
+      .join(', ');
+
+    const result = await Swal.fire({
+      title: 'Producto Michipiti',
+      html: `
+        <div class="text-start">
+          <div class="fw-bold mb-2">${escapeHTML(item.titulo || 'Producto')}</div>
+          <div class="small text-muted mb-2">${escapeHTML(item.fecha || '')} · ${escapeHTML((item.hora || '').slice(0, 5))}</div>
+          <div><strong>Tipo:</strong> ${escapeHTML(item.tipo_producto_nombre || 'Sin tipo')}</div>
+          <div><strong>Sección:</strong> ${escapeHTML(item.seccion || 'Sin sección')}</div>
+          <div><strong>Responsable:</strong> ${escapeHTML(item.responsable_nombre || 'Sin responsable')}</div>
+          <div><strong>Responsable 2:</strong> ${escapeHTML(item.responsable2_nombre || 'Sin responsable 2')}</div>
+          <div><strong>Redes:</strong> ${redes || 'Sin redes'}</div>
+          <div><strong>Estado:</strong> ${escapeHTML(item.estado || 'BORRADOR')}</div>
+        </div>
+      `,
+      showDenyButton: true,
+      denyButtonText: '+ Nuevo Mundial',
+      confirmButtonText: 'Cerrar',
+    });
+
+    if(result.isDenied){
+      fillModalForm({}, fecha, hourValue, allowed, key);
+    }
   }
 
   async function openModal(dayIndex, hourValue, allowed = true){
@@ -2209,8 +2287,17 @@
         return;
       }
 
-      const selected = findSlotItemById(key, choice.itemId) || {};
+      const selected = findSlotItemByUid(key, choice.uid) || {};
+      if(isMichipitiItem(selected)){
+        await showMichipitiProductModal(selected, fecha, hourValue, allowed, key);
+        return;
+      }
       fillModalForm(selected, fecha, hourValue, allowed, key);
+      return;
+    }
+
+    if(items.length === 1 && isMichipitiItem(items[0])){
+      await showMichipitiProductModal(items[0], fecha, hourValue, allowed, key);
       return;
     }
 
@@ -2288,7 +2375,7 @@
     const item = { ...res.item, hora: (res.item.hora || '').slice(0, 5) };
 
     if(oldKey && oldKey !== slotKey(item.fecha, item.hora)){
-      slotData[oldKey] = slotItems(slotData[oldKey]).filter(existingItem => Number(existingItem.id || 0) !== Number(item.id || 0));
+      slotData[oldKey] = slotItems(slotData[oldKey]).filter(existingItem => isMichipitiItem(existingItem) || Number(existingItem.id || 0) !== Number(item.id || 0));
       if(slotData[oldKey].length === 0){
         delete slotData[oldKey];
       }
@@ -2430,7 +2517,7 @@
         return;
       }
 
-      slotData[key] = slotItems(slotData[key]).filter(item => Number(item.id || 0) !== propuestaId);
+      slotData[key] = slotItems(slotData[key]).filter(item => isMichipitiItem(item) || Number(item.id || 0) !== propuestaId);
       if(slotData[key].length === 0){
         delete slotData[key];
       }

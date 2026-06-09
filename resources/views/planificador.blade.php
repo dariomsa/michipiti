@@ -217,6 +217,10 @@
     padding: 6px 8px;
     text-align: left;
     line-height: 1.15;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-height:100%;
   }
 
   .slot-topline{
@@ -242,6 +246,38 @@
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
+  }
+
+  .slot-social-footer{
+    display:flex;
+    justify-content:flex-end;
+    gap:6px;
+    margin-top:auto;
+    padding-top:4px;
+    border-top:1px solid rgba(0,0,0,0.05);
+  }
+
+  .slot-social-footer img{
+    width:13px;
+    height:13px;
+    object-fit:contain;
+    display:block;
+  }
+
+  .slot-platform-pill{
+    min-width:16px;
+    height:14px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid rgba(15,23,42,.12);
+    color:#111827;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:8px;
+    font-weight:800;
+    line-height:1;
+    padding:0 4px;
   }
 
   .slot-origin-badge{
@@ -566,6 +602,15 @@
 @php
   $puedeAprobar = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
   $puedeDragDrop = auth()->user() && auth()->user()->hasRole('director');
+  $redesSocialesMap = $redesSociales
+      ->mapWithKeys(fn ($redSocial) => [
+          $redSocial->id => [
+              'nombre' => $redSocial->nombre,
+              'icon' => asset('images/redes-sociales/'.$redSocial->slug.'.svg'),
+              'fallback' => strtoupper(substr($redSocial->nombre, 0, 2)),
+          ],
+      ])
+      ->all();
 @endphp
 
 <div class="propuestas-wrap">
@@ -798,6 +843,7 @@
   const baseAllowedSchedule = @json($baseAllowedSchedule);
   const baseVisibleSchedule = @json($baseVisibleSchedule);
   const specialScheduleByDate = @json($specialScheduleByDate);
+  const redesSocialesMap = @json($redesSocialesMap);
 
   const tbody = document.getElementById('calendarBody');
   const slotModalEl = document.getElementById('slotModal');
@@ -1312,10 +1358,37 @@
       data.responsable_nombre || 'Sin responsable'
     ].filter(Boolean).join(' • ');
 
+    const socialFooter = document.createElement('div');
+    socialFooter.className = 'slot-social-footer';
+
+    const redIds = Array.isArray(data.redes_sociales_ids) ? data.redes_sociales_ids : [];
+    redIds.slice(0, 5).forEach(redId => {
+      const red = redesSocialesMap[String(redId)] || redesSocialesMap[redId];
+      if(!red) return;
+
+      if(red.icon){
+        const icon = document.createElement('img');
+        icon.src = red.icon;
+        icon.alt = red.nombre || 'Red social';
+        icon.title = red.nombre || 'Red social';
+        socialFooter.appendChild(icon);
+        return;
+      }
+
+      const fallback = document.createElement('span');
+      fallback.className = 'slot-platform-pill';
+      fallback.textContent = red.fallback || String(red.nombre || '?').slice(0, 2).toUpperCase();
+      fallback.title = red.nombre || 'Red social';
+      socialFooter.appendChild(fallback);
+    });
+
     topLine.appendChild(title);
     topLine.appendChild(badge);
     wrap.appendChild(topLine);
     wrap.appendChild(meta);
+    if(socialFooter.children.length){
+      wrap.appendChild(socialFooter);
+    }
     td.appendChild(wrap);
     td.classList.add('busy', getStatusClass(data));
 

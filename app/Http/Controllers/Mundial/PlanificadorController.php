@@ -10,6 +10,7 @@ use App\Models\MundialPlataforma;
 use App\Models\MundialProducto;
 use App\Models\MundialPrioridad;
 use App\Models\MundialTipo;
+use App\Models\Producto;
 use App\Models\RedSocial;
 use App\Models\TipoProducto;
 use App\Models\User;
@@ -123,7 +124,21 @@ class PlanificadorController extends Controller
             ->map(fn (MundialProducto $producto): array => $this->serializeProducto($producto, $request->user()))
             ->values();
 
-        return response()->json($items);
+        $michipitiItems = Producto::query()
+            ->with([
+                'user:id,name',
+                'editor:id,name',
+                'responsable2:id,name',
+                'tipoProducto:id,nombre,slug',
+            ])
+            ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
+            ->orderBy('fecha')
+            ->orderBy('hora')
+            ->get()
+            ->map(fn (Producto $producto): array => $this->serializeMichipitiProducto($producto))
+            ->values();
+
+        return response()->json($items->concat($michipitiItems)->values());
     }
 
     public function periodistas(): JsonResponse
@@ -639,6 +654,8 @@ class PlanificadorController extends Controller
     private function serializeProducto(MundialProducto $producto, User $user): array
     {
         return [
+            'source' => 'mundial',
+            'uid' => 'mundial:'.$producto->id,
             'id' => $producto->id,
             'tipo_producto_id' => $producto->tipo_producto_id,
             'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
@@ -682,6 +699,40 @@ class PlanificadorController extends Controller
             'assigned_at' => optional($producto->assigned_at)->toDateTimeString(),
             'updated_at' => optional($producto->updated_at)->toDateTimeString(),
             'can_delete' => $this->canDeleteProducto($user, $producto),
+        ];
+    }
+
+    private function serializeMichipitiProducto(Producto $producto): array
+    {
+        return [
+            'source' => 'michipiti',
+            'uid' => 'michipiti:'.$producto->id,
+            'id' => $producto->id,
+            'tipo_producto_id' => $producto->tipo_producto_id,
+            'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
+            'tipo_producto_slug' => $producto->tipoProducto?->slug,
+            'redes_sociales_ids' => collect($producto->redes_sociales_ids ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all(),
+            'fecha' => optional($producto->fecha)->format('Y-m-d'),
+            'hora' => $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : null,
+            'titulo' => $producto->titulo,
+            'descripcion' => $producto->copy,
+            'seccion' => $producto->seccion,
+            'estado' => $producto->estado,
+            'origen' => $producto->origen,
+            'asignado_a' => $producto->user_id,
+            'responsable_nombre' => $producto->user?->name,
+            'responsable2_id' => $producto->responsable2_id,
+            'responsable2_nombre' => $producto->responsable2?->name,
+            'link' => $producto->referencia,
+            'canva_url' => $producto->canva_url,
+            'prioridad' => $producto->prioridad,
+            'dificultad' => $producto->dificultad,
+            'assigned_at' => optional($producto->assigned_at)->toDateTimeString(),
+            'updated_at' => optional($producto->updated_at)->toDateTimeString(),
+            'can_delete' => false,
         ];
     }
 
