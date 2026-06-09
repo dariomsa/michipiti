@@ -29,6 +29,7 @@ class PlanificadorController extends Controller
         $baseAllowedSchedule = $this->scheduleByDayZeroBased();
         $baseVisibleSchedule = $this->visibleHoursZeroBased();
         $empresaActivaId = app(EmpresaContext::class)->currentId();
+        $puedeEditarMundial = ! $this->isMundialReadOnlyUser(request()->user());
 
         return view('mundial.planificador', [
             'tiposProducto' => TipoProducto::query()
@@ -63,6 +64,7 @@ class PlanificadorController extends Controller
             'baseAllowedSchedule' => $baseAllowedSchedule,
             'baseVisibleSchedule' => $baseVisibleSchedule,
             'specialScheduleByDate' => [],
+            'puedeEditarMundial' => $puedeEditarMundial,
         ]);
     }
 
@@ -118,6 +120,7 @@ class PlanificadorController extends Controller
                 'mundialTipo:id,nombre',
             ])
             ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
+            ->where('visible', true)
             ->orderBy('fecha')
             ->orderBy('hora')
             ->get()
@@ -166,6 +169,13 @@ class PlanificadorController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($this->isMundialReadOnlyUser($request->user())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol solo puede ver el Especial Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $data = $request->validate(
             [
                 'id' => ['nullable', 'integer', 'exists:mundial_productos,id'],
@@ -192,7 +202,7 @@ class PlanificadorController extends Controller
                 ],
                 'redes_sociales_ids' => ['nullable', 'array'],
                 'redes_sociales_ids.*' => ['integer', Rule::exists('redes_sociales', 'id')],
-                'etapa' => ['nullable', 'string', Rule::in(['Borrador', 'En proceso', 'Terminado', 'Por cerrar'])],
+                'etapa' => ['nullable', 'string', Rule::in(['Borrador', 'En proceso', 'Terminado', 'Por cerrar', 'Por entregar'])],
             ],
             [
                 'id.exists' => 'El producto que intentas editar ya no existe.',
@@ -264,7 +274,14 @@ class PlanificadorController extends Controller
         $mundialEquipo = MundialEquipo::query()->findOrFail($data['mundial_equipo_id']);
         $mundialTipo = MundialTipo::query()->findOrFail($data['mundial_tipo_id']);
         $isComercial = strcasecmp($mundialTipo->nombre, 'Comercial') === 0;
+        $etapa = $data['etapa'] ?? 'Borrador';
+
+        if ($etapa === 'Por entregar' && ! $isComercial) {
+            throw new HttpException(422, 'La etapa Por entregar solo está disponible para productos comerciales.');
+        }
+
         $auspicio = $isComercial ? ($data['auspicio'] ?? null) : null;
+        $visible = $etapa === 'Por entregar' ? false : true;
 
         if ($producto->exists && $producto->origen === 'pauta') {
             $seIntentoEditarCampoBloqueado =
@@ -304,12 +321,13 @@ class PlanificadorController extends Controller
             'orden_dia' => $this->orderDiaFromTime($data['hora']),
             'seccion' => $mundialEquipo->nombre,
             'copy' => $data['descripcion'] ?? null,
-            'referencia' => $data['etapa'] ?? 'Borrador',
+            'referencia' => $etapa,
             'creditos' => $auspicio,
             'estado' => $data['estado'] ?: ($producto->estado ?: 'BORRADOR'),
             'prioridad' => $mundialPrioridad->nombre,
             'dificultad' => $producto->dificultad ?: 'BASICO',
             'origen' => $origen,
+            'visible' => $visible,
         ]);
 
         if ($request->user()->hasAnyRole(['editor', 'director'])) {
@@ -379,6 +397,13 @@ class PlanificadorController extends Controller
 
     public function destroy(Request $request, MundialProducto $producto): JsonResponse
     {
+        if ($this->isMundialReadOnlyUser($request->user())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol solo puede ver el Especial Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         if (! $this->canDeleteProducto($request->user(), $producto)) {
             return response()->json([
                 'ok' => false,
@@ -409,6 +434,13 @@ class PlanificadorController extends Controller
 
     public function move(Request $request): JsonResponse
     {
+        if ($this->isMundialReadOnlyUser($request->user())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol solo puede ver el Especial Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         if (! $request->user()->hasAnyRole(['editor', 'director'])) {
             return response()->json([
                 'ok' => false,
@@ -487,6 +519,13 @@ class PlanificadorController extends Controller
 
     public function approve(Request $request): JsonResponse
     {
+        if ($this->isMundialReadOnlyUser($request->user())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol solo puede ver el Especial Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         if (! $request->user()->hasAnyRole(['editor', 'director'])) {
             return response()->json([
                 'ok' => false,
@@ -539,6 +578,13 @@ class PlanificadorController extends Controller
 
     public function toPauta(Request $request): JsonResponse
     {
+        if ($this->isMundialReadOnlyUser($request->user())) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol solo puede ver el Especial Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $data = $request->validate(
             [
                 'propuesta_id' => ['required', 'integer', 'exists:mundial_productos,id'],
@@ -675,12 +721,17 @@ class PlanificadorController extends Controller
 
     private function canDeleteProducto(User $user, MundialProducto $producto): bool
     {
-        return $user->hasRole('director');
+        return ! $this->isMundialReadOnlyUser($user) && $user->hasRole('director');
     }
 
     private function deleteDeniedMessage(User $user, MundialProducto $producto): string
     {
         return 'Solo el rol director puede eliminar productos.';
+    }
+
+    private function isMundialReadOnlyUser(?User $user): bool
+    {
+        return $user && $user->hasRole('mundial_lectura') && $user->getRoleNames()->count() === 1;
     }
 
     private function resolveTipoProductoId(?int $tipoProductoId = null): int

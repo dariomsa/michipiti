@@ -20,6 +20,7 @@ class RoleCatalog
             'comunity_manager',
             'director',
             'videografia',
+            'mundial_lectura',
         ];
     }
 

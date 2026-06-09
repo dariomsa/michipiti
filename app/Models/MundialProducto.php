@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MundialProducto extends Model
 {
@@ -49,6 +50,7 @@ class MundialProducto extends Model
         'origen',
         'pauta_comercial',
         'programado_metricool',
+        'visible',
     ];
 
     /**
@@ -62,6 +64,7 @@ class MundialProducto extends Model
             'orden_dia' => 'integer',
             'pauta_comercial' => 'boolean',
             'programado_metricool' => 'boolean',
+            'visible' => 'boolean',
             'mundial_plataformas_ids' => 'array',
             'redes_sociales_ids' => 'array',
         ];
@@ -120,5 +123,10 @@ class MundialProducto extends Model
     public function movimientos(): HasMany
     {
         return $this->hasMany(MundialMovimiento::class, 'mundial_producto_id')->latest('id');
+    }
+
+    public function productoConvertido(): HasOne
+    {
+        return $this->hasOne(Producto::class, 'mundial_id');
     }
 }

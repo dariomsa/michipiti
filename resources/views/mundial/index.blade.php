@@ -78,6 +78,8 @@
   .stage-en-proceso,
   .stage-por-cerrar{background:#fef3c7;color:#92400e;}
   .stage-terminado{background:#dcfce7;color:#166534;}
+  .stage-por-entregar{background:#fff1f2;color:#be123c;}
+  .visible-badge{background:#e0f2fe;border-radius:999px;color:#075985;font-size:10px;font-weight:800;letter-spacing:.04em;padding:3px 8px;text-transform:uppercase;white-space:nowrap;}
   .tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px;padding-left:6px;}
   .tag{background:#eef1f5;border-radius:6px;color:var(--blue);font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:3px 7px;text-transform:uppercase;}
   .tag.format{background:#f3eee6;color:#7a6a4d;}
@@ -125,7 +127,8 @@
   };
   $fmtDate = fn ($date) => $date ? ucfirst($date->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY')) : 'Sin fecha';
   $fmtTime = fn ($time) => $time ? \Carbon\Carbon::parse($time)->format('H\hi') : '--';
-  $canEditDateTime = auth()->user()?->hasRole('director') ?? false;
+  $puedeEditarMundial = $puedeEditarMundial ?? true;
+  $canEditDateTime = $puedeEditarMundial && (auth()->user()?->hasRole('director') ?? false);
   $plataformaIconMap = [
       'web' => 'web',
       'facebook' => 'facebook',
@@ -157,6 +160,8 @@
                   'responsable2_id' => $producto->responsable2_id,
                   'edicion_id' => $producto->manager_id,
                   'etapa' => $producto->referencia ?: 'Borrador',
+                  'visible' => (bool) $producto->visible,
+                  'es_michipiti' => (bool) $producto->productoConvertido?->estado,
               ],
           ];
       })
@@ -264,11 +269,20 @@
             $plataformaIds = collect($producto->mundial_plataformas_ids ?? ($producto->mundial_plataforma_id ? [$producto->mundial_plataforma_id] : []))->map(fn ($id) => (int) $id);
             $plataformaNombres = $plataformaIds->map(fn ($id) => $plataformasById->get($id)?->nombre)->filter()->values();
             $etapa = $producto->referencia ?: 'Borrador';
+            $estadoMichipiti = $producto->productoConvertido?->estado;
+            $esMichipiti = (bool) $estadoMichipiti;
+            $badgeEstado = $producto->visible ? $etapa : ($esMichipiti ? $estadoMichipiti : $etapa);
             $etapaClass = match ($etapa) {
                 'Terminado' => 'stage-terminado',
                 'En proceso' => 'stage-en-proceso',
                 'Por cerrar' => 'stage-por-cerrar',
+                'Por entregar' => 'stage-por-entregar',
                 default => 'stage-borrador',
+            };
+            $estadoClass = match ($badgeEstado) {
+                'APROBADO', 'FINALIZADO', 'PROGRAMADO' => 'stage-terminado',
+                'PENDIENTE' => 'stage-por-cerrar',
+                default => $producto->visible ? $etapaClass : 'stage-en-proceso',
             };
           @endphp
 
@@ -278,12 +292,18 @@
               <span>{{ $plataformaNombres->first() ?? 'Mundial' }}</span>
             </div>
 
-            <article class="mcard {{ $tipoClass }} is-clickable" data-edit-product="{{ $producto->id }}">
+            <article
+              class="mcard {{ $tipoClass }} {{ $puedeEditarMundial && ! $esMichipiti ? 'is-clickable' : 'is-locked' }}"
+              @if($puedeEditarMundial && ! $esMichipiti) data-edit-product="{{ $producto->id }}" @endif
+            >
               <div class="mcard-head">
                 <p class="mcard-title">{{ $producto->titulo }}</p>
                 <div class="badge-stack">
                   <span class="type-badge {{ $tipoClass }}">{{ $tipoNombre }}</span>
-                  <span class="stage-badge {{ $etapaClass }}">{{ $etapa }}</span>
+                  <span class="stage-badge {{ $estadoClass }}">{{ $badgeEstado }}</span>
+                  @if($esMichipiti)
+                    <span class="visible-badge">Michipiti</span>
+                  @endif
                 </div>
               </div>
 
@@ -439,6 +459,7 @@
                 <option value="En proceso">En proceso</option>
                 <option value="Terminado">Terminado</option>
                 <option value="Por cerrar">Por cerrar</option>
+                <option value="Por entregar">Por entregar</option>
               </select>
             </div>
           </div>
@@ -446,7 +467,9 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-dark" id="saveMundialEditBtn">Guardar</button>
+        @if($puedeEditarMundial)
+          <button type="button" class="btn btn-dark" id="saveMundialEditBtn">Guardar</button>
+        @endif
       </div>
     </div>
   </div>
@@ -457,6 +480,7 @@
 <script>
   const mundialEditItems = @json($editItems);
   const canEditDateTime = @json($canEditDateTime);
+  const puedeEditarMundial = @json($puedeEditarMundial);
   const mundialEditModalEl = document.getElementById('mundialEditModal');
   const mundialEditModal = new bootstrap.Modal(mundialEditModalEl);
   const mundialEditForm = document.getElementById('mundialEditForm');
@@ -548,9 +572,26 @@
     }
   }
 
+  function syncEditEtapaVisibility(){
+    const etapaOption = [...document.getElementById('editEtapa').options].find(option => option.value === 'Por entregar');
+    const comercial = isComercialTipo(editMundialTipo);
+
+    if(etapaOption){
+      etapaOption.hidden = !comercial;
+      etapaOption.disabled = !comercial;
+    }
+
+    if(!comercial && document.getElementById('editEtapa').value === 'Por entregar'){
+      document.getElementById('editEtapa').value = 'Borrador';
+    }
+  }
+
   async function openEditModal(productId){
+    if(!puedeEditarMundial) return;
+
     const item = mundialEditItems[String(productId)] || mundialEditItems[productId];
     if(!item) return;
+    if(item.es_michipiti) return;
 
     await ensureEditUsersLoaded();
 
@@ -569,6 +610,7 @@
     document.getElementById('editDescripcion').value = item.descripcion || '';
     editAuspicio.value = item.auspicio || '';
     syncEditAuspicioVisibility();
+    syncEditEtapaVisibility();
     document.getElementById('editLider').value = item.asignado_a || '';
     document.getElementById('editResponsable').value = item.responsable2_id || '';
     document.getElementById('editEdicion').value = item.edicion_id || '';
@@ -588,8 +630,11 @@
     }
   });
   editMundialTipo?.addEventListener('change', syncEditAuspicioVisibility);
+  editMundialTipo?.addEventListener('change', syncEditEtapaVisibility);
 
   saveMundialEditBtn?.addEventListener('click', async () => {
+    if(!puedeEditarMundial) return;
+
     const hasPlataformas = syncEditPlataformasValidation(true);
     if(!hasPlataformas || !mundialEditForm.checkValidity()){
       mundialEditForm.classList.add('was-validated');

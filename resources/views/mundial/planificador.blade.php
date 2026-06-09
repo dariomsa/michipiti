@@ -771,8 +771,9 @@
 @section('content')
 
 @php
-  $puedeAprobar = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
-  $puedeDragDrop = auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
+  $puedeEditarMundial = $puedeEditarMundial ?? true;
+  $puedeAprobar = $puedeEditarMundial && auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
+  $puedeDragDrop = $puedeEditarMundial && auth()->user() && auth()->user()->hasAnyRole(['editor', 'director']);
   $plataformaIconMap = [
       'facebook' => 'facebook',
       'instagram' => 'instagram',
@@ -903,9 +904,11 @@
           <span class="badge text-bg-secondary" id="modalDayLabel">Día: -</span>
           <span class="badge text-bg-secondary" id="modalHourLabel">Hora: -</span>
           <span class="badge text-bg-warning d-none" id="modalOutOfScheduleLabel">Fuera de pauta</span>
-          <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" id="newSameSlotBtn" title="Agregar otro producto en este horario">
-            <i class="bi bi-plus-lg"></i>
-          </button>
+          @if($puedeEditarMundial)
+            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" id="newSameSlotBtn" title="Agregar otro producto en este horario">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          @endif
         </div>
 
         <form id="slotForm" class="needs-validation" novalidate autocomplete="off">
@@ -1039,6 +1042,7 @@
                 <option value="En proceso">En proceso</option>
                 <option value="Terminado">Terminado</option>
                 <option value="Por cerrar">Por cerrar</option>
+                <option value="Por entregar">Por entregar</option>
               </select>
             </div>
           </div>
@@ -1062,7 +1066,7 @@
           <i class="bi bi-box-arrow-up-right me-1"></i> Ver Canva
         </a>
 
-        <button type="button" class="btn btn-dark" id="saveSlotBtn">Guardar</button>
+        <button type="button" class="btn btn-dark {{ $puedeEditarMundial ? '' : 'd-none' }}" id="saveSlotBtn" @disabled(! $puedeEditarMundial)>Guardar</button>
       </div>
     </div>
   </div>
@@ -1072,6 +1076,7 @@
 @push('scripts')
 <script>
   const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const puedeEditarMundial = @json($puedeEditarMundial);
   const puedeAprobar = @json($puedeAprobar);
   const puedeDragDrop = @json($puedeDragDrop);
 
@@ -2082,23 +2087,24 @@
   function setFormEditable(mode = 'full'){
     const fullEditable = mode === 'full';
     const pautaEditable = mode === 'pauta';
+    const readOnly = mode === 'readonly';
 
-    formPrioridad.disabled = !fullEditable;
+    formPrioridad.disabled = readOnly || !fullEditable;
     plataformasGrid.querySelectorAll('input[name="mundial_plataformas_ids[]"]').forEach(input => {
-      input.disabled = !fullEditable;
+      input.disabled = readOnly || !fullEditable;
     });
-    formEquipo.disabled = !fullEditable;
-    formMundialTipo.disabled = !fullEditable;
-    formTitle.readOnly = !fullEditable;
-    formDesc.readOnly = !fullEditable;
-    formAuspicio.readOnly = !fullEditable;
-    formStatus.disabled = !fullEditable;
-    formResponsable.disabled = !(fullEditable || pautaEditable);
-    formResponsable2.disabled = !(fullEditable || pautaEditable);
-    formEdicion.disabled = !(fullEditable || pautaEditable);
-    formEtapa.disabled = !(fullEditable || pautaEditable);
+    formEquipo.disabled = readOnly || !fullEditable;
+    formMundialTipo.disabled = readOnly || !fullEditable;
+    formTitle.readOnly = readOnly || !fullEditable;
+    formDesc.readOnly = readOnly || !fullEditable;
+    formAuspicio.readOnly = readOnly || !fullEditable;
+    formStatus.disabled = readOnly || !fullEditable;
+    formResponsable.disabled = readOnly || !(fullEditable || pautaEditable);
+    formResponsable2.disabled = readOnly || !(fullEditable || pautaEditable);
+    formEdicion.disabled = readOnly || !(fullEditable || pautaEditable);
+    formEtapa.disabled = readOnly || !(fullEditable || pautaEditable);
     redesSocialesGrid.querySelectorAll('input[name="redes_sociales_ids[]"]').forEach(input => {
-      input.disabled = !(fullEditable || pautaEditable);
+      input.disabled = readOnly || !(fullEditable || pautaEditable);
     });
   }
 
@@ -2143,12 +2149,27 @@
     return selectedTipoName(select).toLowerCase() === 'comercial';
   }
 
+  function syncEtapaVisibility(){
+    const etapaOption = [...formEtapa.options].find(option => option.value === 'Por entregar');
+    const comercial = isComercialTipo(formMundialTipo);
+
+    if(etapaOption){
+      etapaOption.hidden = !comercial;
+      etapaOption.disabled = !comercial;
+    }
+
+    if(!comercial && formEtapa.value === 'Por entregar'){
+      formEtapa.value = 'Borrador';
+    }
+  }
+
   function syncAuspicioVisibility(){
     const show = isComercialTipo(formMundialTipo);
     formAuspicioWrap.classList.toggle('d-none', !show);
     if(!show){
       formAuspicio.value = '';
     }
+    syncEtapaVisibility();
   }
 
   function toggleActionButtons(existing){
@@ -2157,7 +2178,7 @@
     const isLockedStatus = backendStatus === 'APROBADO' || backendStatus === 'FINALIZADO';
     const canvaUrl = (existing.canva_url || '').trim();
 
-    saveBtn.classList.toggle('d-none', isLockedStatus);
+    saveBtn.classList.toggle('d-none', !puedeEditarMundial || isLockedStatus);
 
     if(canvaLinkBtn){
       canvaLinkBtn.href = canvaUrl || '#';
@@ -2166,7 +2187,7 @@
 
     deleteSlotBtn.dataset.propuestaId = existing.id || '';
     deleteSlotBtn.dataset.key = existing.__key || '';
-    deleteSlotBtn.classList.toggle('d-none', !existing.id || !existing.can_delete);
+    deleteSlotBtn.classList.toggle('d-none', !puedeEditarMundial || !existing.id || !existing.can_delete);
 
     if(approveBtn){
       const showApprove = puedeAprobar && !!existing.id && (backendStatus === 'PENDIENTE' || existing.origen === 'pendiente');
@@ -2177,6 +2198,10 @@
   }
 
   function prepareNewProductSameSlot(){
+    if(!puedeEditarMundial){
+      return;
+    }
+
     const currentDate = formDate.value;
     const currentTime = formTime.value;
     const allowed = formIsAllowed.value;
@@ -2214,12 +2239,16 @@
       canvaLinkBtn.classList.add('d-none');
       canvaLinkBtn.href = '#';
     }
-    saveBtn.classList.remove('d-none');
+    saveBtn.classList.toggle('d-none', !puedeEditarMundial);
     refreshModalLabels();
     syncStatusBySchedule();
   }
 
   function fillModalForm(existing, fecha, hourValue, allowed, key){
+    if(!puedeEditarMundial && !existing.id){
+      return;
+    }
+
     formId.value = existing.id || '';
     formDate.value = existing.fecha || fecha;
     formTime.value = (existing.hora || hourValue).slice(0, 5);
@@ -2252,7 +2281,7 @@
     syncStatusBySchedule();
 
     modalTitle.textContent = existing.id ? 'Editar producto' : 'Crear producto';
-    setFormEditable(existing.origen === 'pauta' ? 'pauta' : 'full');
+    setFormEditable(!puedeEditarMundial ? 'readonly' : (existing.origen === 'pauta' ? 'pauta' : 'full'));
 
     toggleActionButtons({ ...existing, __key: key });
     slotModal.show();
@@ -2270,8 +2299,8 @@
       title: 'Productos en este horario',
       html: `<select class="form-select" id="slotItemPicker">${options}</select>`,
       showCancelButton: true,
-      showDenyButton: true,
-      confirmButtonText: 'Editar',
+      showDenyButton: puedeEditarMundial,
+      confirmButtonText: puedeEditarMundial ? 'Editar' : 'Ver',
       denyButtonText: '+ Nuevo',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
@@ -2310,12 +2339,12 @@
           <div><strong>Estado:</strong> ${escapeHTML(item.estado || 'BORRADOR')}</div>
         </div>
       `,
-      showDenyButton: true,
+      showDenyButton: puedeEditarMundial,
       denyButtonText: '+ Nuevo Mundial',
       confirmButtonText: 'Cerrar',
     });
 
-    if(result.isDenied){
+    if(result.isDenied && puedeEditarMundial){
       fillModalForm({}, fecha, hourValue, allowed, key);
     }
   }
@@ -2325,6 +2354,10 @@
     const key = slotKey(fecha, hourValue);
     const items = slotItems(slotData[key]);
 
+    if(!puedeEditarMundial && items.length === 0){
+      return;
+    }
+
     if(items.length > 1){
       const choice = await chooseSlotItem(items, fecha, hourValue);
 
@@ -2333,6 +2366,9 @@
       }
 
       if(choice.action === 'new'){
+        if(!puedeEditarMundial){
+          return;
+        }
         fillModalForm({}, fecha, hourValue, allowed, key);
         return;
       }
@@ -2380,6 +2416,10 @@
   }
 
   async function saveCurrentForm(){
+    if(!puedeEditarMundial){
+      return { ok: false, validation: true };
+    }
+
     const hasPlataformas = syncPlataformasValidation(true);
     const hasRedesSociales = syncRedesSocialesValidation(true);
 
@@ -2464,6 +2504,10 @@
   }
 
   saveBtn.addEventListener('click', async () => {
+    if(!puedeEditarMundial){
+      return;
+    }
+
     if(isSavingSlot){
       return;
     }

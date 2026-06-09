@@ -7,6 +7,8 @@ use App\Models\CalendarioEspecial;
 use App\Models\CalendarioEspecialSlot;
 use App\Models\Empresa;
 use App\Models\HorarioSlot;
+use App\Models\MundialPlataforma;
+use App\Models\MundialProducto;
 use App\Models\Producto;
 use App\Models\RedSocial;
 use App\Models\Seccion;
@@ -18,6 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -102,7 +105,41 @@ class PlanificadorController extends Controller
             ->map(fn (Producto $producto): array => $this->serializeProducto($producto, $request->user()))
             ->values();
 
-        return response()->json($items);
+        $instagramPlataformaId = MundialPlataforma::query()
+            ->where('nombre', 'Instagram')
+            ->value('id');
+        $instagramRedSocialId = RedSocial::query()
+            ->where('slug', 'instagram')
+            ->value('id');
+
+        $mundialItems = collect();
+
+        if ($instagramPlataformaId) {
+            $mundialItems = MundialProducto::query()
+                ->with([
+                    'user:id,name',
+                    'responsable2:id,name',
+                    'manager:id,name',
+                    'tipoProducto:id,nombre,slug',
+                    'mundialPrioridad:id,nombre',
+                    'mundialEquipo:id,nombre',
+                    'mundialTipo:id,nombre',
+                ])
+                ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
+                ->where('visible', true)
+                ->where(function ($query) use ($instagramPlataformaId): void {
+                    $query
+                        ->whereJsonContains('mundial_plataformas_ids', (int) $instagramPlataformaId)
+                        ->orWhere('mundial_plataforma_id', (int) $instagramPlataformaId);
+                })
+                ->orderBy('fecha')
+                ->orderBy('hora')
+                ->get()
+                ->map(fn (MundialProducto $producto): array => $this->serializeMundialProducto($producto, $instagramRedSocialId ? (int) $instagramRedSocialId : null))
+                ->values();
+        }
+
+        return response()->json($items->concat($mundialItems)->values());
     }
 
     public function periodistas(): JsonResponse
@@ -392,12 +429,14 @@ class PlanificadorController extends Controller
                 'hora' => $targetTime,
                 'orden_dia' => $this->orderDiaFromTime($targetTime),
             ]);
+            $this->syncMundialScheduleFromProducto($source->fresh());
 
             $target->update([
                 'fecha' => $sourceOriginalDate,
                 'hora' => $sourceOriginalTime,
                 'orden_dia' => $this->orderDiaFromTime($sourceOriginalTime),
             ]);
+            $this->syncMundialScheduleFromProducto($target->fresh());
 
             $this->registrarMovimiento(
                 producto: $source->fresh(),
@@ -436,6 +475,7 @@ class PlanificadorController extends Controller
                 'hora' => $targetTime,
                 'orden_dia' => $this->orderDiaFromTime($targetTime),
             ]);
+            $this->syncMundialScheduleFromProducto($source->fresh());
 
             $this->registrarMovimiento(
                 producto: $source->fresh(),
@@ -560,9 +600,155 @@ class PlanificadorController extends Controller
         ]);
     }
 
+    public function mundialToPauta(Request $request): JsonResponse
+    {
+        $data = $request->validate(
+            [
+                'mundial_producto_id' => ['required', 'integer', 'exists:mundial_productos,id'],
+                'asignado_a' => ['required', 'integer', 'exists:users,id'],
+                'responsable2_id' => ['nullable', 'integer', 'exists:users,id'],
+                'fecha' => ['required', 'date'],
+                'hora' => ['required', 'date_format:H:i'],
+                'seccion' => ['required', 'string', 'max:100'],
+                'titulo' => ['required', 'string', 'max:200'],
+                'descripcion' => ['nullable', 'string'],
+                'tipo_producto_id' => [
+                    'required',
+                    'integer',
+                    Rule::exists('tipo_productos', 'id')->where(
+                        fn ($query) => $query->where('empresa_id', app(EmpresaContext::class)->currentId())
+                    ),
+                ],
+                'redes_sociales_ids' => ['nullable', 'array'],
+                'redes_sociales_ids.*' => ['integer', Rule::exists('redes_sociales', 'id')],
+                'link' => ['nullable', 'string', 'max:600'],
+            ],
+            [
+                'mundial_producto_id.required' => 'No se recibió el producto Mundial a mover a pauta.',
+                'mundial_producto_id.exists' => 'El producto Mundial que intentas mover ya no existe.',
+                'asignado_a.required' => 'Debes seleccionar un responsable antes de enviar a pauta.',
+                'asignado_a.exists' => 'El responsable seleccionado ya no existe.',
+                'responsable2_id.exists' => 'El responsable 2 seleccionado ya no existe.',
+                'fecha.required' => 'Debes seleccionar una fecha.',
+                'hora.required' => 'Debes seleccionar una hora.',
+                'seccion.required' => 'Debes seleccionar una sección.',
+                'titulo.required' => 'Debes ingresar un título.',
+                'tipo_producto_id.required' => 'Debes seleccionar un tipo de producto.',
+                'tipo_producto_id.exists' => 'El tipo de producto seleccionado no es válido para esta empresa.',
+                'redes_sociales_ids.array' => 'Las redes sociales seleccionadas no tienen un formato válido.',
+                'redes_sociales_ids.*.exists' => 'Una de las redes sociales seleccionadas ya no existe.',
+                'link.max' => 'La referencia no puede superar los 600 caracteres.',
+            ],
+        );
+
+        $mundialProducto = MundialProducto::query()->findOrFail($data['mundial_producto_id']);
+
+        if (! $mundialProducto->visible) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este producto Mundial ya fue movido u ocultado.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $isAllowedSchedule = $this->isAllowedSchedule($data['fecha'], $data['hora']);
+
+        $producto = DB::transaction(function () use ($data, $mundialProducto, $request): Producto {
+            $producto = new Producto();
+            $producto->empresa_id = $mundialProducto->empresa_id;
+            $producto->mundial_id = $mundialProducto->id;
+            $producto->tipo_producto_id = $this->resolveTipoProductoId((int) $data['tipo_producto_id']);
+            $producto->user_id = (int) $data['asignado_a'];
+            $producto->responsable2_id = $data['responsable2_id'] ?? $mundialProducto->responsable2_id;
+            $producto->redes_sociales_ids = collect($data['redes_sociales_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+            $producto->editor_id = $request->user()->hasAnyRole(['editor', 'director']) ? $request->user()->id : null;
+            $producto->titulo = $data['titulo'];
+            $producto->fecha = $data['fecha'];
+            $producto->hora = $data['hora'];
+            $producto->orden_dia = $this->orderDiaFromTime($data['hora']);
+            $producto->seccion = $data['seccion'];
+            $producto->copy = $data['descripcion'] ?? null;
+            $producto->referencia = $data['link'] ?? $mundialProducto->referencia;
+            $producto->creditos = $mundialProducto->creditos;
+            $producto->estado = 'BORRADOR';
+            $producto->prioridad = $mundialProducto->prioridad ?: 'Día';
+            $producto->dificultad = $mundialProducto->dificultad ?: 'BASICO';
+            $producto->origen = $this->isAllowedSchedule($data['fecha'], $data['hora']) ? 'pauta' : 'pendiente';
+            $producto->assigned_at = $producto->origen === 'pauta' ? now() : null;
+            $producto->save();
+
+            $mundialProducto->visible = false;
+            $mundialProducto->save();
+
+            $this->registrarMovimiento(
+                producto: $producto,
+                user: $request->user(),
+                accion: 'ENVIADO_PAUTA',
+                estadoAnterior: null,
+                estadoNuevo: $producto->estado,
+                motivo: 'Producto creado en pauta desde Especial Mundial.',
+                meta: [
+                    'origen_anterior' => 'mundial',
+                    'origen_nuevo' => $producto->origen,
+                    'mundial_producto_id' => $mundialProducto->id,
+                    'asignado_a' => $producto->user_id,
+                ],
+            );
+
+            $mundialProducto->movimientos()->create([
+                'user_id' => $request->user()->id,
+                'accion' => 'MOVIDO_PLANIFICADOR_NORMAL',
+                'estado_anterior' => $mundialProducto->estado,
+                'estado_nuevo' => $mundialProducto->estado,
+                'motivo' => 'Producto Mundial movido al planificador.',
+                'meta' => [
+                    'producto_id' => $producto->id,
+                    'visible_anterior' => true,
+                    'visible_nuevo' => false,
+                ],
+            ]);
+
+            return $producto->load(['user:id,name', 'editor:id,name', 'responsable2:id,name', 'tipoProducto:id,nombre,slug']);
+        });
+
+        if (! $isAllowedSchedule) {
+            $directorIds = User::role('director')
+                ->pluck('id')
+                ->map(fn ($value) => (int) $value)
+                ->toArray();
+
+            if ($directorIds !== []) {
+                $texto =
+                    "────────────────────────\n".
+                    app(CarruselSlackNotifier::class)->formatHeader($producto)."\n".
+                    "⚠️ Por aprobar fuera de pauta\n".
+                    "Origen: Especial Mundial\n".
+                    "Horario: {$data['fecha']} {$data['hora']}\n".
+                    "────────────────────────\n";
+
+                app(CarruselSlackNotifier::class)->notifyUsersByIds(
+                    $directorIds,
+                    $texto,
+                    (int) $request->user()->id,
+                );
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'item' => $this->serializeProducto($producto, $request->user()),
+            'carrusel_id' => $producto->id,
+        ]);
+    }
+
     private function serializeProducto(Producto $producto, User $user): array
     {
         return [
+            'source' => 'producto',
+            'uid' => 'producto:'.$producto->id,
             'id' => $producto->id,
             'tipo_producto_id' => $producto->tipo_producto_id,
             'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
@@ -589,6 +775,55 @@ class PlanificadorController extends Controller
             'assigned_at' => optional($producto->assigned_at)->toDateTimeString(),
             'updated_at' => optional($producto->updated_at)->toDateTimeString(),
             'can_delete' => $this->canDeleteProducto($user, $producto),
+        ];
+    }
+
+    private function syncMundialScheduleFromProducto(Producto $producto): void
+    {
+        if (! $producto->mundial_id) {
+            return;
+        }
+
+        MundialProducto::query()
+            ->whereKey($producto->mundial_id)
+            ->update([
+                'fecha' => optional($producto->fecha)->format('Y-m-d'),
+                'hora' => $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : null,
+                'orden_dia' => $producto->hora ? $this->orderDiaFromTime(Carbon::parse($producto->hora)->format('H:i')) : null,
+            ]);
+    }
+
+    private function serializeMundialProducto(MundialProducto $producto, ?int $instagramRedSocialId = null): array
+    {
+        return [
+            'source' => 'mundial',
+            'uid' => 'mundial:'.$producto->id,
+            'id' => $producto->id,
+            'tipo_producto_id' => $producto->tipo_producto_id,
+            'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
+            'tipo_producto_slug' => $producto->tipoProducto?->slug,
+            'redes_sociales_ids' => $instagramRedSocialId ? [$instagramRedSocialId] : [],
+            'fecha' => optional($producto->fecha)->format('Y-m-d'),
+            'hora' => $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : null,
+            'titulo' => $producto->titulo,
+            'descripcion' => $producto->copy,
+            'seccion' => $producto->mundialEquipo?->nombre ?: $producto->seccion,
+            'estado' => $producto->estado,
+            'origen' => 'mundial',
+            'asignado_a' => $producto->user_id,
+            'responsable_nombre' => $producto->user?->name,
+            'responsable2_id' => $producto->responsable2_id,
+            'responsable2_nombre' => $producto->responsable2?->name,
+            'edicion_nombre' => $producto->manager?->name,
+            'link' => $producto->referencia,
+            'canva_url' => $producto->canva_url,
+            'prioridad' => $producto->mundialPrioridad?->nombre ?: $producto->prioridad,
+            'dificultad' => $producto->dificultad,
+            'mundial_tipo_nombre' => $producto->mundialTipo?->nombre,
+            'etapa' => $producto->referencia ?: 'Borrador',
+            'assigned_at' => optional($producto->assigned_at)->toDateTimeString(),
+            'updated_at' => optional($producto->updated_at)->toDateTimeString(),
+            'can_delete' => false,
         ];
     }
 

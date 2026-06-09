@@ -26,6 +26,10 @@ Route::get('/', function () {
         return redirect()->route('login');
     }
 
+    if ($user->hasRole('mundial_lectura') && $user->getRoleNames()->count() === 1) {
+        return redirect()->route('mundial.index');
+    }
+
     if ($user->hasRole('editor')) {
         return redirect()->route('editor.productos.index');
     }
@@ -63,20 +67,6 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::post('/empresa-activa', [EmpresaActivaController::class, 'update'])->name('empresa-activa.update');
-    Route::get('/dashboard', [DirectorDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/pauta', [PautaController::class, 'index'])->name('pauta.index');
-    Route::get('/pauta/items', [PautaController::class, 'items'])->name('pauta.items');
-    Route::post('/pauta/{id}/programar', [PautaController::class, 'programar'])->name('pauta.programar');
-    Route::post('/pauta/{id}/metricool', [PautaController::class, 'metricool'])->name('pauta.metricool');
-    Route::get('/planificador', [PlanificadorController::class, 'index'])->name('planificador');
-    Route::get('/planificador/horarios', [PlanificadorController::class, 'horarios'])->name('planificador.horarios');
-    Route::get('/planificador/week', [PlanificadorController::class, 'week']);
-    Route::get('/planificador/periodistas', [PlanificadorController::class, 'periodistas']);
-    Route::post('/planificador/store', [PlanificadorController::class, 'store']);
-    Route::post('/planificador/move', [PlanificadorController::class, 'move']);
-    Route::post('/planificador/aprobar', [PlanificadorController::class, 'approve']);
-    Route::post('/planificador/to-pauta', [PlanificadorController::class, 'toPauta']);
-    Route::delete('/planificador/{producto}', [PlanificadorController::class, 'destroy']);
     Route::get('/mundial/listado', [MundialProductoController::class, 'index'])->name('mundial.index');
     Route::get('/mundial/planificador', [MundialPlanificadorController::class, 'index'])->name('mundial.planificador');
     Route::get('/mundial/planificador/week', [MundialPlanificadorController::class, 'week']);
@@ -87,6 +77,25 @@ Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::post('/mundial/planificador/aprobar', [MundialPlanificadorController::class, 'approve']);
     Route::post('/mundial/planificador/to-pauta', [MundialPlanificadorController::class, 'toPauta']);
     Route::delete('/mundial/planificador/{producto}', [MundialPlanificadorController::class, 'destroy']);
+
+    Route::middleware('not.mundial_readonly')->group(function (): void {
+        Route::get('/dashboard', [DirectorDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/pauta', [PautaController::class, 'index'])->name('pauta.index');
+        Route::get('/pauta/items', [PautaController::class, 'items'])->name('pauta.items');
+        Route::post('/pauta/{id}/programar', [PautaController::class, 'programar'])->name('pauta.programar');
+        Route::post('/pauta/{id}/metricool', [PautaController::class, 'metricool'])->name('pauta.metricool');
+        Route::get('/planificador', [PlanificadorController::class, 'index'])->name('planificador');
+        Route::get('/planificador/horarios', [PlanificadorController::class, 'horarios'])->name('planificador.horarios');
+        Route::get('/planificador/week', [PlanificadorController::class, 'week']);
+        Route::get('/planificador/periodistas', [PlanificadorController::class, 'periodistas']);
+        Route::post('/planificador/store', [PlanificadorController::class, 'store']);
+        Route::post('/planificador/move', [PlanificadorController::class, 'move']);
+        Route::post('/planificador/aprobar', [PlanificadorController::class, 'approve']);
+        Route::post('/planificador/to-pauta', [PlanificadorController::class, 'toPauta']);
+        Route::post('/planificador/mundial-to-pauta', [PlanificadorController::class, 'mundialToPauta']);
+        Route::delete('/planificador/{producto}', [PlanificadorController::class, 'destroy']);
+    });
+
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 

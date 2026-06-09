@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\CarruselMensaje;
 use App\Models\CarruselMovimiento;
+use App\Models\MundialMovimiento;
 use App\Observers\CarruselMensajeObserver;
 use App\Observers\CarruselMovimientoObserver;
+use App\Observers\MundialMovimientoObserver;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,5 +30,6 @@ class AppServiceProvider extends ServiceProvider
 
         CarruselMovimiento::observe(CarruselMovimientoObserver::class);
         CarruselMensaje::observe(CarruselMensajeObserver::class);
+        MundialMovimiento::observe(MundialMovimientoObserver::class);
     }
 }

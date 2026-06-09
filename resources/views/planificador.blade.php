@@ -280,6 +280,49 @@
     padding:0 4px;
   }
 
+  .slot-multi{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    padding:4px;
+    height:100%;
+  }
+
+  .slot-item{
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(15,23,42,.1);
+    border-left:4px solid rgba(15,23,42,.28);
+    border-radius:6px;
+    min-height:0;
+    overflow:hidden;
+    padding:3px 5px;
+  }
+
+  .slot-item .slot-meta,
+  .slot-item .slot-social-footer{
+    display:none;
+  }
+
+  .slot-item .slot-title{
+    font-size:10px;
+  }
+
+  .slot-item .slot-origin-badge{
+    font-size:8px;
+    padding:1px 4px;
+  }
+
+  .slot-more{
+    align-self:flex-end;
+    background:#111827;
+    border-radius:999px;
+    color:#fff;
+    font-size:10px;
+    font-weight:800;
+    line-height:1;
+    padding:3px 7px;
+  }
+
   .slot-origin-badge{
     flex:0 0 auto;
     display:inline-flex;
@@ -313,10 +356,34 @@
     color:#374151;
   }
 
+  .proposal-emphasis{
+    background:#eef2ff;
+    border:1px solid #a5b4fc;
+    color:#3730a3;
+  }
+
   .slot-origin-pendiente{
     background:#fff7ed;
     border-color:#fed7aa;
     color:#c2410c;
+  }
+
+  .slot-origin-mundial{
+    background:#eff6ff;
+    border-color:#93c5fd;
+    color:#1d4ed8;
+  }
+
+  .slot-origin-mundial-com{
+    background:#fff7ed;
+    border-color:#fdba74;
+    color:#b9551f;
+  }
+
+  .slot-origin-mundial-edi{
+    background:#eff6ff;
+    border-color:#93c5fd;
+    color:#1d4ed8;
   }
 
   .legend-dot{
@@ -695,10 +762,13 @@
           <span class="badge text-bg-secondary" id="modalDayLabel">Día: -</span>
           <span class="badge text-bg-secondary" id="modalHourLabel">Hora: -</span>
           <span class="badge text-bg-warning d-none" id="modalOutOfScheduleLabel">Fuera de pauta</span>
+          <span class="badge proposal-emphasis d-none" id="modalProposalLabel">Mundial</span>
         </div>
 
         <form id="slotForm" class="needs-validation" novalidate autocomplete="off">
           <input type="hidden" id="formId" name="id" />
+          <input type="hidden" id="formSource" name="source" value="producto" />
+          <input type="hidden" id="formMundialId" name="mundial_producto_id" />
           <input type="hidden" id="formIsAllowed" value="1" />
           <input type="hidden" id="formDate" name="fecha" />
           <input type="hidden" id="formTime" name="hora" />
@@ -853,9 +923,12 @@
   const modalDayLabel = document.getElementById('modalDayLabel');
   const modalHourLabel = document.getElementById('modalHourLabel');
   const modalOutOfScheduleLabel = document.getElementById('modalOutOfScheduleLabel');
+  const modalProposalLabel = document.getElementById('modalProposalLabel');
 
   const form = document.getElementById('slotForm');
   const formId = document.getElementById('formId');
+  const formSource = document.getElementById('formSource');
+  const formMundialId = document.getElementById('formMundialId');
   const formDate = document.getElementById('formDate');
   const formTime = document.getElementById('formTime');
   const formSeccion = document.getElementById('formSeccion');
@@ -893,6 +966,7 @@
   let isSavingSlot = false;
   let lastWeekSignature = '';
   let autoRefreshTimer = null;
+  let dynamicVisibleHoursByDate = {};
 
   function startOfWeekMonday(date){
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -950,6 +1024,7 @@
   function buildWeekSignature(items){
     return JSON.stringify(
       (items || []).map(item => [
+        item.source || 'producto',
         Number(item.id || 0),
         item.fecha || '',
         (item.hora || '').slice(0, 5),
@@ -996,12 +1071,37 @@
 
   function getVisibleHoursForDate(dateStr){
     const special = specialScheduleByDate[dateStr];
+    const dynamicHours = dynamicVisibleHoursByDate[dateStr] || [];
+
     if(special){
-      return special.visible || [];
+      return [...(special.visible || []), ...dynamicHours];
     }
 
     const idx = calendarDayIndexFromDate(dateStr);
-    return idx === null ? [] : (baseVisibleSchedule[idx] || []);
+    return idx === null ? dynamicHours : [...(baseVisibleSchedule[idx] || []), ...dynamicHours];
+  }
+
+  function setDynamicVisibleHoursFromItems(items){
+    const next = {};
+
+    (items || []).forEach(item => {
+      if(!item.fecha || !item.hora) return;
+
+      const hora = (item.hora || '').slice(0, 5);
+      if(!hora) return;
+
+      next[item.fecha] = next[item.fecha] || [];
+      next[item.fecha].push(hora);
+    });
+
+    Object.keys(next).forEach(date => {
+      next[date] = sortHours(next[date]);
+    });
+
+    const changed = JSON.stringify(dynamicVisibleHoursByDate) !== JSON.stringify(next);
+    dynamicVisibleHoursByDate = next;
+
+    return changed;
   }
 
   function getAllHoursForCurrentWeek(){
@@ -1112,6 +1212,12 @@
     return fallback;
   }
 
+  function escapeHTML(value){
+    const div = document.createElement('div');
+    div.textContent = value ?? '';
+    return div.innerHTML;
+  }
+
   function buildHeaderStatHTML(available, occupied){
     return `
       <div class="day-head-stats">
@@ -1160,8 +1266,8 @@
 
         futureSlots++;
         const key = slotKey(fecha, hour);
-        const item = slotData[key];
-        if(item && (item.titulo || item.copy || item.seccion)){
+        const items = slotItems(slotData[key]);
+        if(items.some(hasRenderableItem)){
           occupied++;
         } else {
           available++;
@@ -1249,6 +1355,7 @@
 
   function getSlotFromCell(td){
     if(!td) return null;
+    const items = slotItems(slotData[td.dataset.key || '']);
 
     return {
       key: td.dataset.key || '',
@@ -1256,9 +1363,40 @@
       hour: td.dataset.hour,
       allowed: td.dataset.allowed === '1',
       fecha: td.dataset.key ? td.dataset.key.split('|')[0] : null,
-      item: slotData[td.dataset.key || ''] || null,
+      item: firstEditableSlotItem(items),
+      items,
       td
     };
+  }
+
+  function slotItems(value){
+    if(Array.isArray(value)){
+      return value.filter(Boolean);
+    }
+
+    return value ? [value] : [];
+  }
+
+  function firstEditableSlotItem(items){
+    return slotItems(items).find(item => !isMundialItem(item)) || null;
+  }
+
+  function isMundialItem(item){
+    return String(item?.source || '').toLowerCase() === 'mundial';
+  }
+
+  function mundialBadgeSuffix(item){
+    const tipo = String(item?.mundial_tipo_nombre || '').toLowerCase();
+
+    if(tipo === 'comercial'){
+      return 'com';
+    }
+
+    if(tipo === 'editorial'){
+      return 'edi';
+    }
+
+    return '';
   }
 
   function hasRenderableItem(item){
@@ -1268,12 +1406,14 @@
   function isDraggableItem(item){
     if(!puedeDragDrop) return false;
     if(!item) return false;
+    if(isMundialItem(item)) return false;
     if(!hasRenderableItem(item)) return false;
     return !!item.id;
   }
 
   function canMoveItemToSlot(item, slot){
     if(!item || !slot) return false;
+    if(isMundialItem(item)) return false;
     if(slot.td?.dataset.past === '1') return false;
 
     const origen = String(item.origen || '').toLowerCase();
@@ -1293,6 +1433,7 @@
   }
 
   function renderCellContent(td, data){
+    const items = slotItems(data);
     td.innerHTML = '';
     td.draggable = false;
     td.ondragstart = null;
@@ -1324,19 +1465,65 @@
       td.classList.remove('slot-out-of-schedule');
     }
 
-    if(!data || !(data.titulo || data.copy || data.seccion)) return;
+    if(items.length === 0 || !items.some(hasRenderableItem)) return;
 
-    td.title = [
-      `Titulo: ${data.titulo || data.seccion || 'Contenido'}`,
-      `Tipo: ${data.tipo_producto_nombre || 'Sin tipo'}`,
-      `Responsable: ${data.responsable_nombre || 'Sin responsable'}`,
-      `Responsable 2: ${data.responsable2_nombre || 'Sin responsable 2'}`,
-      `Estado: ${data.estado || 'BORRADOR'}`,
-      `${data.origen || '-'}`,
-    ].join('\n');
+    td.title = items.map(item => [
+      `Titulo: ${item.titulo || item.seccion || 'Contenido'}`,
+      `Origen: ${isMundialItem(item) ? 'Especial Mundial' : (item.origen || '-')}`,
+      `Tipo: ${item.mundial_tipo_nombre || item.tipo_producto_nombre || 'Sin tipo'}`,
+      `Responsable: ${item.responsable_nombre || 'Sin responsable'}`,
+      `Responsable 2: ${item.responsable2_nombre || 'Sin responsable 2'}`,
+      isMundialItem(item) ? `Etapa: ${item.etapa || 'Borrador'}` : `Estado: ${item.estado || 'BORRADOR'}`,
+    ].join('\n')).join('\n\n');
 
+    const outer = document.createElement('div');
+    outer.className = items.length > 1 ? 'slot-multi' : '';
+
+    items.slice(0, 2).forEach(item => {
+      outer.appendChild(renderSlotItemContent(item, items.length > 1));
+    });
+
+    if(items.length > 2){
+      const more = document.createElement('div');
+      more.className = 'slot-more';
+      more.textContent = `+${items.length - 2}`;
+      outer.appendChild(more);
+    }
+
+    td.appendChild(outer);
+    td.classList.add('busy', getStatusClass(firstEditableSlotItem(items) || items[0]));
+
+    const draggableItem = items.length === 1 ? firstEditableSlotItem(items) : null;
+    if(isDraggableItem(draggableItem)){
+      td.draggable = true;
+      td.classList.add('slot-draggable');
+
+      td.ondragstart = (e) => {
+        dragSource = getSlotFromCell(td);
+        isDragging = true;
+        td.classList.add('slot-dragging');
+        setDragOverlayVisible(true);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragSource.key);
+      };
+
+      td.ondragend = () => {
+        td.classList.remove('slot-dragging');
+        clearDropStates();
+        setTimeout(() => {
+          isDragging = false;
+          dragSource = null;
+        }, 0);
+      };
+    }
+  }
+
+  function renderSlotItemContent(data, compact = false){
     const wrap = document.createElement('div');
     wrap.className = 'slot-wrap';
+    if(compact){
+      wrap.classList.add('slot-item');
+    }
 
     const topLine = document.createElement('div');
     topLine.className = 'slot-topline';
@@ -1347,14 +1534,20 @@
 
     const origin = (data.origen || '').toLowerCase();
     const badge = document.createElement('span');
-    badge.className = `slot-origin-badge slot-origin-${origin || 'propuesta'}`;
-    badge.textContent = origin || '-';
+    const mundialSuffix = isMundialItem(data) ? mundialBadgeSuffix(data) : '';
+    const badgeOrigin = isMundialItem(data)
+      ? (mundialSuffix ? `mundial-${mundialSuffix}` : 'mundial')
+      : (origin || 'propuesta');
+    badge.className = `slot-origin-badge slot-origin-${badgeOrigin}`;
+    badge.textContent = isMundialItem(data)
+      ? (mundialSuffix ? `mundial-${mundialSuffix}` : 'mundial')
+      : (origin || '-');
 
     const meta = document.createElement('div');
     meta.className = 'slot-meta';
     meta.textContent = [
-      data.estado || 'BORRADOR',
-      data.tipo_producto_nombre || 'Sin tipo',
+      isMundialItem(data) ? (data.etapa || 'Borrador') : (data.estado || 'BORRADOR'),
+      data.mundial_tipo_nombre || data.tipo_producto_nombre || 'Sin tipo',
       data.responsable_nombre || 'Sin responsable'
     ].filter(Boolean).join(' • ');
 
@@ -1389,31 +1582,7 @@
     if(socialFooter.children.length){
       wrap.appendChild(socialFooter);
     }
-    td.appendChild(wrap);
-    td.classList.add('busy', getStatusClass(data));
-
-    if(isDraggableItem(data)){
-      td.draggable = true;
-      td.classList.add('slot-draggable');
-
-      td.ondragstart = (e) => {
-        dragSource = getSlotFromCell(td);
-        isDragging = true;
-        td.classList.add('slot-dragging');
-        setDragOverlayVisible(true);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', dragSource.key);
-      };
-
-      td.ondragend = () => {
-        td.classList.remove('slot-dragging');
-        clearDropStates();
-        setTimeout(() => {
-          isDragging = false;
-          dragSource = null;
-        }, 0);
-      };
-    }
+    return wrap;
   }
 
   function buildGrid(){
@@ -1524,27 +1693,31 @@
     const q = (searchInput.value || '').toLowerCase().trim();
 
     document.querySelectorAll('.slot').forEach(td => {
-      const item = slotData[td.dataset.key || ''];
+      const items = slotItems(slotData[td.dataset.key || '']);
 
       if(!q){
         td.style.opacity = '';
         return;
       }
 
-      const haystack = [
-        item?.titulo,
-        item?.descripcion,
-        item?.responsable_nombre,
-        item?.responsable2_nombre,
-        item?.tipo_producto_nombre,
-        item?.seccion,
-        item?.copy,
-        item?.hashtags,
-        item?.creditos,
-        item?.estado,
-        item?.prioridad,
-        item?.dificultad
-      ].filter(Boolean).join(' ').toLowerCase();
+      const haystack = items.map(item => [
+          item?.titulo,
+          item?.descripcion,
+          item?.responsable_nombre,
+          item?.responsable2_nombre,
+          item?.tipo_producto_nombre,
+          item?.mundial_tipo_nombre,
+          item?.seccion,
+          item?.copy,
+          item?.hashtags,
+          item?.creditos,
+          item?.estado,
+          item?.etapa,
+          item?.prioridad,
+          item?.dificultad
+        ].filter(Boolean).join(' '))
+        .join(' ')
+        .toLowerCase();
 
       td.style.opacity = haystack.includes(q) ? '' : '0.25';
     });
@@ -1576,12 +1749,16 @@
     const start = fmtISODate(weekStart);
     const items = await fetchJSON(`/planificador/week?week_start=${encodeURIComponent(start)}`);
     lastWeekSignature = buildWeekSignature(items);
+    setDynamicVisibleHoursFromItems(items);
+    buildGrid();
 
     Object.keys(slotData).forEach(key => delete slotData[key]);
 
     items.forEach(item => {
       const hora = (item.hora || '').slice(0, 5);
-      slotData[slotKey(item.fecha, hora)] = { ...item, hora };
+      const key = slotKey(item.fecha, hora);
+      slotData[key] = slotItems(slotData[key]);
+      slotData[key].push({ ...item, hora });
     });
 
     document.querySelectorAll('.slot').forEach(td => {
@@ -1612,13 +1789,20 @@
     }
 
     lastWeekSignature = nextSignature;
+    const dynamicHoursChanged = setDynamicVisibleHoursFromItems(items);
 
     Object.keys(slotData).forEach(key => delete slotData[key]);
 
     items.forEach(item => {
       const hora = (item.hora || '').slice(0, 5);
-      slotData[slotKey(item.fecha, hora)] = { ...item, hora };
+      const key = slotKey(item.fecha, hora);
+      slotData[key] = slotItems(slotData[key]);
+      slotData[key].push({ ...item, hora });
     });
+
+    if(dynamicHoursChanged){
+      buildGrid();
+    }
 
     document.querySelectorAll('.slot').forEach(td => {
       const dayIndex = Number(td.dataset.day);
@@ -1704,12 +1888,18 @@
 
     formOrigen.value = selectedValue;
     formOrigen.disabled = disabled;
+    syncProposalEmphasis();
   }
 
   function syncStatusBySchedule(){
     const allowed = getAllowedHoursForDate(formDate.value).includes(formTime.value);
     formIsAllowed.value = allowed ? '1' : '0';
     modalOutOfScheduleLabel.classList.toggle('d-none', allowed);
+  }
+
+  function syncProposalEmphasis(){
+    const isMundial = formSource.value === 'mundial';
+    modalProposalLabel?.classList.toggle('d-none', !isMundial);
   }
 
   function toggleActionButtons(existing){
@@ -1730,8 +1920,12 @@
     deleteSlotBtn.classList.toggle('d-none', !existing.id || !existing.can_delete);
 
     toCarruselBtn.dataset.propuestaId = existing.id || '';
+    toCarruselBtn.dataset.source = existing.source || 'producto';
+    toCarruselBtn.dataset.mundialId = existing.mundial_id || '';
     toCarruselBtn.dataset.key = existing.__key || '';
-    toCarruselBtn.classList.toggle('d-none', !existing.id || existing.origen === 'pauta' || existing.origen === 'pendiente' || currentStatus === 'PENDIENTE');
+    const isMundial = existing.source === 'mundial';
+    toCarruselBtn.classList.toggle('d-none', (!existing.id && !isMundial) || existing.origen === 'pauta' || existing.origen === 'pendiente' || currentStatus === 'PENDIENTE');
+    syncProposalEmphasis();
 
     if(approveBtn){
       const showApprove = puedeAprobar && !!existing.id && (backendStatus === 'PENDIENTE' || existing.origen === 'pendiente');
@@ -1741,16 +1935,72 @@
     }
   }
 
-  function openModal(dayIndex, hourValue, allowed = true){
+  async function chooseSlotItem(items){
+    const options = items.map(item => {
+      const uid = item.uid || `${item.source || 'producto'}:${item.id}`;
+      const type = isMundialItem(item) ? 'Mundial' : (item.origen || 'Producto');
+      const title = item.titulo || item.seccion || `Producto #${item.id}`;
+      return `<option value="${escapeHTML(uid)}">${escapeHTML(type)} · ${escapeHTML(title)}</option>`;
+    }).join('');
+
+    const result = await Swal.fire({
+      title: 'Productos en este horario',
+      html: `<select class="form-select" id="slotItemPicker">${options}</select>`,
+      showCancelButton: true,
+      confirmButtonText: 'Abrir',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      preConfirm: () => document.getElementById('slotItemPicker')?.value,
+    });
+
+    if(!result.isConfirmed || !result.value){
+      return null;
+    }
+
+    return items.find(item => (item.uid || `${item.source || 'producto'}:${item.id}`) === result.value) || null;
+  }
+
+  function mundialAsProposal(item){
+    return {
+      ...item,
+      id: '',
+      mundial_id: item.id,
+      source: 'mundial',
+      origen: 'propuesta',
+      estado: 'BORRADOR',
+      can_delete: false,
+      canva_url: '',
+    };
+  }
+
+  async function openModal(dayIndex, hourValue, allowed = true){
     if(isPastSlot(dayIndex, hourValue)){
       return;
     }
 
     const fecha = fmtISODate(addDays(weekStart, dayIndex));
     const key = slotKey(fecha, hourValue);
-    const existing = slotData[key] || {};
+    const items = slotItems(slotData[key]);
+    let existing = firstEditableSlotItem(items) || {};
+
+    if(items.length > 1){
+      const selected = await chooseSlotItem(items);
+      if(!selected){
+        return;
+      }
+
+      if(isMundialItem(selected)){
+        existing = mundialAsProposal(selected);
+      } else {
+        existing = selected;
+      }
+    } else if(items.length === 1 && isMundialItem(items[0])){
+      existing = mundialAsProposal(items[0]);
+    }
 
     formId.value = existing.id || '';
+    formSource.value = existing.source || 'producto';
+    formMundialId.value = existing.mundial_id || '';
     formDate.value = existing.fecha || fecha;
     formTime.value = (existing.hora || hourValue).slice(0, 5);
     formSeccion.value = existing.seccion || '';
@@ -1788,15 +2038,24 @@
         setOriginOptions(['pendiente'], 'pendiente', true);
       }
     } else if(allowed) {
-      setOriginOptions(['propuesta', 'comercial'], 'propuesta', false);
+      setOriginOptions(existing.source === 'mundial' ? ['propuesta'] : ['propuesta', 'comercial'], 'propuesta', existing.source === 'mundial');
     } else {
       setOriginOptions(['pendiente'], 'pendiente', true);
     }
 
-    modalTitle.textContent = existing.id ? 'Editar producto' : 'Crear producto';
+    modalTitle.textContent = existing.source === 'mundial'
+      ? 'Producto Mundial'
+      : (existing.id ? 'Editar producto' : 'Crear producto');
     setFormEditable(existing.origen === 'pauta' ? 'pauta' : 'full');
 
     toggleActionButtons({ ...existing, __key: key });
+    if(existing.source === 'mundial'){
+      saveBtn.classList.add('d-none');
+      deleteSlotBtn.classList.add('d-none');
+      if(approveBtn){
+        approveBtn.classList.add('d-none');
+      }
+    }
     slotModal.show();
   }
 
@@ -1853,7 +2112,7 @@
       link: formLink.value.trim() || null,
     };
 
-    const oldKey = Object.keys(slotData).find(key => Number(slotData[key]?.id) === Number(payload.id));
+    const oldKey = Object.keys(slotData).find(key => slotItems(slotData[key]).some(item => !isMundialItem(item) && Number(item.id) === Number(payload.id)));
 
     const res = await fetchJSON('/planificador/store', {
       method: 'POST',
@@ -1867,7 +2126,10 @@
     const item = { ...res.item, hora: (res.item.hora || '').slice(0, 5) };
 
     if(oldKey && oldKey !== slotKey(item.fecha, item.hora)){
-      delete slotData[oldKey];
+      slotData[oldKey] = slotItems(slotData[oldKey]).filter(existingItem => isMundialItem(existingItem) || Number(existingItem.id || 0) !== Number(item.id || 0));
+      if(slotData[oldKey].length === 0){
+        delete slotData[oldKey];
+      }
     }
 
     const selectedDate = new Date(item.fecha + 'T00:00:00');
@@ -1987,11 +2249,18 @@
 
   toCarruselBtn?.addEventListener('click', async () => {
     const propuestaId = Number(toCarruselBtn.dataset.propuestaId || 0);
+    const source = toCarruselBtn.dataset.source || 'producto';
+    const mundialId = Number(toCarruselBtn.dataset.mundialId || 0);
     const key = toCarruselBtn.dataset.key || '';
     const responsableId = formResponsable.value ? Number(formResponsable.value) : null;
 
-    if(!propuestaId){
+    if(source === 'producto' && !propuestaId){
       await showError('Primero guarda la propuesta.');
+      return;
+    }
+
+    if(source === 'mundial' && !mundialId){
+      await showError('No se recibió el producto Mundial.');
       return;
     }
 
@@ -2006,24 +2275,57 @@
     }
 
     try{
-      const res = await fetchJSON('/planificador/to-pauta', {
-        method: 'POST',
-        body: JSON.stringify({
-          propuesta_id: propuestaId,
-          asignado_a: responsableId
-        })
-      });
+      let res;
+
+      if(source === 'mundial'){
+        res = await fetchJSON('/planificador/mundial-to-pauta', {
+          method: 'POST',
+          body: JSON.stringify({
+            mundial_producto_id: mundialId,
+            asignado_a: responsableId,
+            responsable2_id: formResponsable2.value ? Number(formResponsable2.value) : null,
+            fecha: formDate.value,
+            hora: formTime.value,
+            seccion: formSeccion.value,
+            titulo: formTitle.value.trim(),
+            descripcion: formDesc.value.trim(),
+            tipo_producto_id: formTipoProducto.value ? Number(formTipoProducto.value) : null,
+            redes_sociales_ids: getSelectedRedesSociales(),
+            link: formLink.value.trim() || null,
+          })
+        });
+      } else {
+        res = await fetchJSON('/planificador/to-pauta', {
+          method: 'POST',
+          body: JSON.stringify({
+            propuesta_id: propuestaId,
+            asignado_a: responsableId
+          })
+        });
+      }
 
       if(!res.ok){
         await showError(res.message || 'No se pudo convertir.');
         return;
       }
 
-      if(slotData[key]){
-        slotData[key].origen = 'pauta';
-        slotData[key].asignado_a = responsableId;
-        slotData[key].responsable_nombre = formResponsable.options[formResponsable.selectedIndex]?.text || '';
-        slotData[key].can_delete = false;
+      if(source === 'mundial'){
+        const item = res.item ? { ...res.item, hora: (res.item.hora || '').slice(0, 5) } : null;
+        slotData[key] = slotItems(slotData[key]).filter(existingItem => !isMundialItem(existingItem) || Number(existingItem.id || 0) !== mundialId);
+        if(item){
+          slotData[key].push(item);
+        }
+        if(slotData[key].length === 0){
+          delete slotData[key];
+        }
+      } else {
+        const currentItem = slotItems(slotData[key]).find(item => !isMundialItem(item) && Number(item.id || 0) === propuestaId);
+        if(currentItem){
+          currentItem.origen = 'pauta';
+          currentItem.asignado_a = responsableId;
+          currentItem.responsable_nombre = formResponsable.options[formResponsable.selectedIndex]?.text || '';
+          currentItem.can_delete = false;
+        }
       }
 
       const td = document.querySelector(`.slot[data-key="${key}"]`);
@@ -2036,7 +2338,11 @@
       applySearchFilter();
       slotModal.hide();
 
-      await showSuccess('Producto enviado a pauta.');
+      await showSuccess(
+        source === 'mundial' && res.item?.origen === 'pendiente'
+          ? 'Producto Mundial enviado a aprobación.'
+          : (source === 'mundial' ? 'Producto Mundial enviado a pauta.' : 'Producto enviado a pauta.')
+      );
     }catch(error){
       console.error(error);
       await showError(getErrorMessage(error, 'No se pudo cambiar el producto a pauta.'));
@@ -2066,11 +2372,14 @@
         return;
       }
 
-      delete slotData[key];
+      slotData[key] = slotItems(slotData[key]).filter(item => isMundialItem(item) || Number(item.id || 0) !== propuestaId);
+      if(slotData[key].length === 0){
+        delete slotData[key];
+      }
 
       const td = document.querySelector(`.slot[data-key="${key}"]`);
       if(td){
-        renderCellContent(td, null);
+        renderCellContent(td, slotData[key] || null);
       }
 
       updateHeaderCounters();

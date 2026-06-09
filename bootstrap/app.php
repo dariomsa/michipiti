@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRoleMiddleware::class,
             'empresa.activa' => \App\Http\Middleware\SetCurrentEmpresaMiddleware::class,
+            'not.mundial_readonly' => \App\Http\Middleware\BlockMundialReadOnlyMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

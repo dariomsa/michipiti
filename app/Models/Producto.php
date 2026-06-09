@@ -18,6 +18,7 @@ class Producto extends Model
      */
     protected $fillable = [
         'empresa_id',
+        'mundial_id',
         'tipo_producto_id',
         'user_id',
         'responsable2_id',
@@ -62,6 +63,11 @@ class Producto extends Model
     public function tipoProducto(): BelongsTo
     {
         return $this->belongsTo(TipoProducto::class);
+    }
+
+    public function mundialProducto(): BelongsTo
+    {
+        return $this->belongsTo(MundialProducto::class, 'mundial_id');
     }
 
     public function user(): BelongsTo

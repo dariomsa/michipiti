@@ -892,8 +892,11 @@
     $empresaActivaImagen = $resolveEmpresaImagen($empresaActiva);
     $listadoUrl = route('dashboard');
     $showDashboard = $user?->hasRole('director') ?? false;
+    $soloLecturaMundial = $user?->hasRole('mundial_lectura') && $user?->getRoleNames()->count() === 1;
 
-    if ($user?->hasRole('editor')) {
+    if ($soloLecturaMundial) {
+        $listadoUrl = route('mundial.index');
+    } elseif ($user?->hasRole('editor')) {
         $listadoUrl = route('editor.productos.index');
     } elseif ($user?->hasRole('director')) {
         $listadoUrl = route('director.productos.index');
@@ -918,7 +921,7 @@
         ['label' => 'Planificación', 'icon' => 'bi-trophy', 'url' => route('mundial.planificador')],
     ];
 
-    $layoutMenu = $layoutMenu ?? array_values(array_filter([
+    $layoutMenu = $layoutMenu ?? ($soloLecturaMundial ? [] : array_values(array_filter([
         $showDashboard ? ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'url' => route('dashboard')] : null,
         ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => $listadoUrl],
         ['label' => 'Pauta', 'icon' => 'bi-calendar-week', 'url' => route('pauta.index')],
@@ -932,7 +935,7 @@
                 ['label' => 'Feriados', 'url' => route('calendario-especial.index')],
             ],
         ] : null,
-    ]));
+    ])));
 @endphp
 
 <div class="page-shell">

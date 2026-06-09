@@ -43,6 +43,7 @@ class ProductoController extends Controller
                 'mundialPlataforma:id,nombre',
                 'mundialEquipo:id,nombre',
                 'mundialTipo:id,nombre',
+                'productoConvertido:id,mundial_id,estado,origen',
             ])
             ->when($filters['q'] !== '', function (Builder $query) use ($filters): void {
                 $q = $filters['q'];
@@ -96,6 +97,7 @@ class ProductoController extends Controller
             'tipos' => $tipos,
             'plataformasById' => $plataformasById,
             'defaultTipoProductoId' => TipoProducto::query()->orderBy('id')->value('id'),
+            'puedeEditarMundial' => ! $this->isMundialReadOnlyUser($request),
             'stats' => [
                 'total' => $statsItems->count(),
                 'editorial' => $tipoEditorialId ? $statsItems->where('mundial_tipo_id', $tipoEditorialId)->count() : 0,
@@ -103,5 +105,12 @@ class ProductoController extends Controller
                 'radio' => $tipoRadioId ? $statsItems->where('mundial_tipo_id', $tipoRadioId)->count() : 0,
             ],
         ]);
+    }
+
+    private function isMundialReadOnlyUser(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user && $user->hasRole('mundial_lectura') && $user->getRoleNames()->count() === 1;
     }
 }
