@@ -1833,7 +1833,6 @@
 
         td.addEventListener('click', () => {
           if(isDragging) return;
-          if(isPast) return;
           openModal(dayIndex, hour, allowed);
         });
 
@@ -2283,10 +2282,6 @@
   }
 
   async function openModal(dayIndex, hourValue, allowed = true){
-    if(isPastSlot(dayIndex, hourValue)){
-      return;
-    }
-
     const fecha = fmtISODate(addDays(weekStart, dayIndex));
     const key = slotKey(fecha, hourValue);
     const items = slotItems(slotData[key]);

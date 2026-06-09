@@ -255,13 +255,6 @@ class PlanificadorController extends Controller
         $isAllowedSchedule = $this->isAllowedSchedule($data['fecha'], $data['hora']);
         $origen = $isAllowedSchedule ? 'propuesta' : 'pendiente';
 
-        if ($this->isPastDateTime($data['fecha'], $data['hora'])) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'No puedes crear o editar productos en fechas u horas anteriores al momento actual.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-
         $mundialPrioridad = MundialPrioridad::query()->findOrFail($data['mundial_prioridad_id']);
         $mundialPlataformas = MundialPlataforma::query()
             ->whereIn('id', collect($data['mundial_plataformas_ids'])->map(fn ($id) => (int) $id)->unique()->values())
