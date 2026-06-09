@@ -721,12 +721,12 @@ class PlanificadorController extends Controller
 
     private function canDeleteProducto(User $user, MundialProducto $producto): bool
     {
-        return ! $this->isMundialReadOnlyUser($user) && $user->hasRole('director');
+        return ! $this->isMundialReadOnlyUser($user) && $user->hasAnyRole(['director', 'editor']);
     }
 
     private function deleteDeniedMessage(User $user, MundialProducto $producto): string
     {
-        return 'Solo el rol director puede eliminar productos.';
+        return 'Solo los roles director y editor pueden eliminar productos.';
     }
 
     private function isMundialReadOnlyUser(?User $user): bool
