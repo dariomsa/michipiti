@@ -738,24 +738,12 @@ class PlanificadorController extends Controller
 
     private function canDeleteProducto(User $user, MundialProducto $producto): bool
     {
-        if ($user->hasRole('director')) {
-            return true;
-        }
-
-        if ($user->hasRole('comercial')) {
-            return $producto->origen === 'comercial';
-        }
-
-        return $producto->estado === 'BORRADOR' && $producto->origen === 'propuesta';
+        return $user->hasRole('director');
     }
 
     private function deleteDeniedMessage(User $user, MundialProducto $producto): string
     {
-        if ($user->hasRole('comercial')) {
-            return 'Los usuarios comerciales solo pueden eliminar productos con origen comercial.';
-        }
-
-        return 'Solo puedes eliminar productos que estén en estado BORRADOR y con origen propuesta.';
+        return 'Solo el rol director puede eliminar productos.';
     }
 
     private function resolveTipoProductoId(?int $tipoProductoId = null): int

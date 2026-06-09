@@ -119,6 +119,7 @@
 
 @section('content')
 @php
+  use Illuminate\Support\Str;
   $chipUrl = function (array $override = []) use ($filters) {
       return route('mundial.index', array_filter(array_merge($filters, $override), fn ($value) => $value !== '' && $value !== 0 && $value !== null));
   };
@@ -126,8 +127,12 @@
   $fmtTime = fn ($time) => $time ? \Carbon\Carbon::parse($time)->format('H\hi') : '--';
   $canEditDateTime = auth()->user()?->hasRole('director') ?? false;
   $plataformaIconMap = [
+      'web' => 'web',
       'facebook' => 'facebook',
       'instagram' => 'instagram',
+      'podcast' => 'podcast',
+      'radio' => 'radio',
+      'shorts' => 'shorts',
       'tiktok' => 'tiktok',
       'youtube' => 'youtube',
       'whatsapp' => 'whatsapp',
@@ -357,13 +362,14 @@
               <div class="platform-grid" id="editPlataformasGrid">
                 @foreach($plataformas as $plataforma)
                   @php
-                    $plataformaSlug = str($plataforma->nombre)->lower()->replace('á', 'a')->replace('é', 'e')->replace('í', 'i')->replace('ó', 'o')->replace('ú', 'u')->replace(' ', '-')->toString();
-                    $plataformaIcon = $plataformaIconMap[$plataformaSlug] ?? null;
+                    $plataformaSlug = Str::slug($plataforma->nombre);
+                    $plataformaIcon = $plataformaIconMap[$plataformaSlug] ?? $plataformaSlug;
+                    $plataformaIconPath = public_path('images/redes-sociales/'.$plataformaIcon.'.svg');
                   @endphp
                   <label class="platform-check">
                     <input type="checkbox" value="{{ $plataforma->id }}">
                     <span class="platform-card" title="{{ $plataforma->nombre }}">
-                      @if($plataformaIcon)
+                      @if(file_exists($plataformaIconPath))
                         <img
                           src="{{ asset('images/redes-sociales/'.$plataformaIcon.'.svg') }}"
                           alt="{{ $plataforma->nombre }}"

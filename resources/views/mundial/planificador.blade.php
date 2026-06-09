@@ -221,6 +221,11 @@
     background: var(--slot-disabled-editable);
   }
 
+  .slot-michipiti-bg{
+    background: linear-gradient(180deg, #fff1f200 0%, #ffe4e6 100%) !important;
+    border-color: #f9a8d4 !important;
+  }
+
   .slot-programado{
     background: var(--green-bg) !important;
     border-color: #15803d !important;
@@ -240,6 +245,11 @@
   .slot-default-busy{
     background: var(--gray-bg) !important;
     border-color: var(--gray-border) !important;
+  }
+
+  .slot.busy.slot-michipiti-bg{
+    background: linear-gradient(180deg, #fff1f200 0%, #ffe4e6 100%) !important;
+    border-color: #f9a8d4 !important;
   }
 
   .slot-wrap{
@@ -440,6 +450,10 @@
   .slot-item.slot-border-michipiti{
     box-shadow:none;
     border-left-width:4px;
+  }
+
+  .slot-item.slot-michipiti-bg{
+    background: rgba(255, 241, 242, .92);
   }
 
   .legend-dot{
@@ -1633,6 +1647,8 @@
       td.classList.remove('slot-not-allowed');
       td.classList.remove('slot-out-of-schedule');
     }
+
+    td.classList.toggle('slot-michipiti-bg', items.length > 0 && items.every(isMichipitiItem));
 
     if(items.length === 0 || !items.some(item => item.titulo || item.copy || item.seccion)) return;
 
