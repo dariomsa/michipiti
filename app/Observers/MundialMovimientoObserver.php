@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\MundialMovimiento;
 use App\Models\User;
 use App\Services\Mundial\MundialSlackNotifier;
+use Carbon\Carbon;
 
 class MundialMovimientoObserver
 {
@@ -26,6 +27,8 @@ class MundialMovimientoObserver
         $mentions = $notifier->mentionsInvolucrados($producto);
         $heading = trim(':trophy: Especial Mundial '.$mentions);
         $motivo = $movimiento->motivo ? "Motivo: {$movimiento->motivo}\n" : '';
+        $fecha = optional($producto->fecha)->format('Y-m-d') ?: 'Sin fecha';
+        $hora = $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : 'Sin hora';
         $sep = "------------------------\n";
 
         $texto =
@@ -34,6 +37,7 @@ class MundialMovimientoObserver
             $notifier->formatHeader($producto)."\n".
             "{$accion} por {$autor}\n".
             $motivo.
+            "Publicacion: {$fecha} {$hora}\n".
             $sep;
 
         // $notifier->notifyInvolucrados($producto, $texto, $movimiento->user_id ? (int) $movimiento->user_id : null);
