@@ -72,7 +72,13 @@ class ProductoController extends Controller
             ->when($filters['fecha'] !== '', fn (Builder $query) => $query->whereDate('fecha', $filters['fecha']));
 
         $statsQuery = clone $baseQuery;
-        $productos = $baseQuery
+        $productosQuery = clone $baseQuery;
+
+        if ($filters['fecha'] === '') {
+            $productosQuery->whereDate('fecha', '>=', today()->toDateString());
+        }
+
+        $productos = $productosQuery
             ->orderByRaw('fecha IS NULL')
             ->orderBy('fecha')
             ->orderBy('hora')
