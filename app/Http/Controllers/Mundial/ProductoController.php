@@ -11,7 +11,9 @@ use App\Models\MundialTipo;
 use App\Models\TipoProducto;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 class ProductoController extends Controller
@@ -43,7 +45,7 @@ class ProductoController extends Controller
                 'mundialPlataforma:id,nombre',
                 'mundialEquipo:id,nombre',
                 'mundialTipo:id,nombre',
-                'productoConvertido:id,mundial_id,estado,origen',
+                'productoConvertido:id,mundial_id,estado,origen,programado_metricool',
             ])
             ->when($filters['q'] !== '', function (Builder $query) use ($filters): void {
                 $q = $filters['q'];
@@ -110,6 +112,34 @@ class ProductoController extends Controller
                 'comercial' => $tipoComercialId ? $statsItems->where('mundial_tipo_id', $tipoComercialId)->count() : 0,
                 'radio' => $tipoRadioId ? $statsItems->where('mundial_tipo_id', $tipoRadioId)->count() : 0,
             ],
+        ]);
+    }
+
+    public function metricool(Request $request, MundialProducto $producto): JsonResponse
+    {
+        if ($this->isMundialReadOnlyUser($request)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol solo puede ver el Especial Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        if ($producto->productoConvertido()->exists()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Los productos pasados a Michipiti no se pueden modificar desde el listado Mundial.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        if (! $producto->programado_metricool) {
+            $producto->forceFill([
+                'programado_metricool' => true,
+            ])->save();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'programado_metricool' => true,
         ]);
     }
 

@@ -68,6 +68,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::post('/empresa-activa', [EmpresaActivaController::class, 'update'])->name('empresa-activa.update');
     Route::get('/mundial/listado', [MundialProductoController::class, 'index'])->name('mundial.index');
+    Route::post('/mundial/listado/{producto}/metricool', [MundialProductoController::class, 'metricool'])->name('mundial.metricool');
     Route::get('/mundial/planificador', [MundialPlanificadorController::class, 'index'])->name('mundial.planificador');
     Route::get('/mundial/planificador/week', [MundialPlanificadorController::class, 'week']);
     Route::get('/mundial/planificador/periodistas', [MundialPlanificadorController::class, 'periodistas']);

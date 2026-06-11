@@ -61,6 +61,13 @@
   .mtime{border-right:2px solid var(--line);padding-right:12px;padding-top:13px;text-align:right;}
   .mtime b{display:block;font-family:Georgia, 'Times New Roman', serif;font-size:19px;line-height:1;}
   .mtime span{color:var(--muted);display:block;font-size:10.5px;margin-top:2px;word-break:break-word;}
+  .metricool-check{align-items:center;background:transparent;border:0;color:var(--muted);display:inline-flex;font-size:10px;font-weight:800;gap:5px;letter-spacing:.03em;padding:0;text-transform:uppercase;white-space:nowrap;}
+  .metricool-meta{flex-basis:100%;margin-top:0;}
+  .metricool-check.is-on{color:#166534;}
+  .metricool-check input{appearance:none;-webkit-appearance:none;background:#fff;border:1px solid #9ca3af;border-radius:3px;cursor:pointer;height:13px;margin:0;position:relative;width:13px;}
+  .metricool-check input:checked{background:#16a34a;border-color:#16a34a;}
+  .metricool-check input:checked::after{border:solid #fff;border-width:0 2px 2px 0;content:"";height:7px;left:4px;position:absolute;top:1px;transform:rotate(45deg);width:4px;}
+  .metricool-check input:disabled{cursor:not-allowed;}
   .mcard{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;padding:13px 15px;position:relative;}
   .mcard.is-clickable{cursor:pointer;transition:transform .15s, box-shadow .15s;}
   .mcard.is-clickable:hover{box-shadow:0 9px 22px -16px rgba(14,23,38,.45);transform:translateY(-1px);}
@@ -116,6 +123,27 @@
     .date-head{align-items:flex-start;flex-direction:column;}
     .mrow{grid-template-columns:62px 1fr;gap:10px;}
   }
+
+  @media (max-width: 420px){
+    .date-group{
+      margin-left:-4px;
+      margin-right:-4px;
+      overflow-x:auto;
+      overscroll-behavior-x:contain;
+      padding:0 4px 6px;
+      -webkit-overflow-scrolling:touch;
+    }
+    .date-head,
+    .mrow{
+      min-width:360px;
+    }
+    .mcard{
+      min-width:0;
+    }
+    .mcard-title{
+      overflow-wrap:anywhere;
+    }
+  }
 </style>
 @endpush
 
@@ -162,6 +190,7 @@
                   'etapa' => $producto->referencia ?: 'Borrador',
                   'visible' => (bool) $producto->visible,
                   'es_michipiti' => (bool) $producto->productoConvertido?->estado,
+                  'programado_metricool' => (bool) ($producto->productoConvertido?->programado_metricool ?? $producto->programado_metricool),
               ],
           ];
       })
@@ -271,6 +300,8 @@
             $etapa = $producto->referencia ?: 'Borrador';
             $estadoMichipiti = $producto->productoConvertido?->estado;
             $esMichipiti = (bool) $estadoMichipiti;
+            $metricoolProgramado = (bool) ($producto->productoConvertido?->programado_metricool ?? $producto->programado_metricool);
+            $puedeMarcarMetricool = $puedeEditarMundial && ! $esMichipiti && ! $metricoolProgramado;
             $badgeEstado = $producto->visible ? $etapa : ($esMichipiti ? $estadoMichipiti : $etapa);
             $etapaClass = match ($etapa) {
                 'Terminado' => 'stage-terminado',
@@ -331,6 +362,16 @@
                 @if(strcasecmp($tipoNombre, 'Comercial') === 0 && $producto->creditos)
                   <span><b>Auspicio:</b> <span class="sponsor-text">{{ $producto->creditos }}</span></span>
                 @endif
+                <label class="metricool-check metricool-meta {{ $metricoolProgramado ? 'is-on' : '' }}" title="{{ $metricoolProgramado ? 'Ya fue marcado en Metricool' : ($esMichipiti ? 'Estado Metricool del producto Michipiti' : 'Marcar como programado en Metricool') }}">
+                  <input
+                    type="checkbox"
+                    class="metricool-toggle"
+                    data-metricool-id="{{ $producto->id }}"
+                    @checked($metricoolProgramado)
+                    @disabled(! $puedeMarcarMetricool)
+                  >
+                  <span>{{ $esMichipiti ? 'Metricool Michipiti' : 'Metricool' }}</span>
+                </label>
               </div>
             </article>
           </div>
@@ -622,6 +663,43 @@
 
   document.querySelectorAll('[data-edit-product]').forEach(card => {
     card.addEventListener('click', () => openEditModal(card.dataset.editProduct));
+  });
+
+  document.querySelectorAll('[data-metricool-id]').forEach(input => {
+    input.addEventListener('click', event => {
+      event.stopPropagation();
+    });
+
+    input.addEventListener('change', async () => {
+      if(!input.checked){
+        input.checked = true;
+        return;
+      }
+
+      input.disabled = true;
+
+      try{
+        const res = await fetchJSON(`/mundial/listado/${input.dataset.metricoolId}/metricool`, {
+          method: 'POST',
+          body: JSON.stringify({})
+        });
+
+        if(!res.ok){
+          throw new Error(res.message || 'No se pudo marcar Metricool.');
+        }
+
+        input.closest('.metricool-check')?.classList.add('is-on');
+      }catch(error){
+        input.checked = false;
+        input.disabled = false;
+        input.closest('.metricool-check')?.classList.remove('is-on');
+        Swal.fire({
+          icon: 'error',
+          text: error.message || 'No se pudo marcar Metricool.',
+          confirmButtonText: 'Aceptar',
+        });
+      }
+    });
   });
 
   editPlataformasGrid?.addEventListener('change', () => {
