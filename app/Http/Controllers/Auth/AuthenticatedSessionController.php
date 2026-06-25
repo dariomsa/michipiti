@@ -38,6 +38,12 @@ class AuthenticatedSessionController extends Controller
         if ($user?->hasAnyRole(['videografia', 'video_manager'])) {
             return route('videografia.audiovisuales.index');
         }
+		
+		 if ($user?->hasRole('mundial_lectura')) {
+            return route('mundial.planificador');
+        }
+		
+		
 
         return route('dashboard');
     }
