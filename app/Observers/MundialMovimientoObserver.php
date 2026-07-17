@@ -40,7 +40,7 @@ class MundialMovimientoObserver
             "Publicacion: {$fecha} {$hora}\n".
             $sep;
 
-        // $notifier->notifyInvolucrados($producto, $texto, $movimiento->user_id ? (int) $movimiento->user_id : null);
+         $notifier->notifyInvolucrados($producto, $texto, $movimiento->user_id ? (int) $movimiento->user_id : null);
 
         $destinatario = User::query()->find(self::SLACK_MOVIMIENTOS_USER_ID);
 

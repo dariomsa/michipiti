@@ -153,7 +153,7 @@ class ProductoController extends Controller
         $producto->load('tipoProducto', 'laminas.archivos');
 
         $validated = $request->validate([
-            'titulo' => ['required', 'string', 'max:200'],
+            'titulo' => ['required', 'string'],
             'seccion' => [
                 'required',
                 'string',
@@ -161,24 +161,24 @@ class ProductoController extends Controller
             ],
             'prioridad' => ['required', 'string', Rule::in($this->prioridades())],
             'copy' => ['nullable', 'string'],
-            'hashtags' => ['required', 'string', 'max:600'],
-            'creditos' => ['nullable', 'string', 'max:600'],
-            'canva_url' => ['nullable', 'url', 'max:600'],
+            'hashtags' => ['required', 'string'],
+            'creditos' => ['nullable', 'string'],
+            'canva_url' => ['nullable', 'url'],
             'accion' => ['required', Rule::in(array_keys($this->accionesDisponibles()))],
             'motivo' => ['nullable', 'string', 'max:600'],
             'laminas' => [$producto->esCarrusel() ? 'required' : 'nullable', 'array', 'min:1'],
             'laminas.*.id' => ['nullable', 'integer'],
-            'laminas.*.titulo' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string', 'max:200'],
-            'laminas.*.descripcion' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string', 'max:180'],
+            'laminas.*.titulo' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string'],
+            'laminas.*.descripcion' => [$producto->esCarrusel() ? 'required' : 'nullable', 'string'],
             'laminas.*.archivos' => ['nullable', 'array'],
-            'laminas.*.archivos.*' => ['nullable', 'file', 'max:30720'],
+            'laminas.*.archivos.*' => ['nullable', 'file'],
             'laminas.*.delete_archivos' => ['nullable', 'array'],
             'laminas.*.delete_archivos.*' => ['nullable', 'integer'],
             'laminas.*.replace_archivos' => ['nullable', 'array'],
-            'laminas.*.replace_archivos.*' => ['nullable', 'file', 'max:30720'],
-            'laminas.*.url_externa' => ['nullable', 'url', 'max:600'],
+            'laminas.*.replace_archivos.*' => ['nullable', 'file'],
+            'laminas.*.url_externa' => ['nullable', 'url'],
             'laminas.*.sin_foto' => ['nullable', 'boolean'],
-            'laminas.*.motivo' => ['nullable', 'string', 'max:255'],
+            'laminas.*.motivo' => ['nullable', 'string'],
         ]);
 
         if ($producto->esCarrusel()) {
