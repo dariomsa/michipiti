@@ -1,16 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Mundial;
+namespace App\Http\Controllers\Multiplataforma;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
-use App\Models\MundialEquipo;
-use App\Models\MundialHorarioSlot;
-use App\Models\MundialPlataforma;
-use App\Models\MundialProducto;
-use App\Models\MundialPrioridad;
-use App\Models\MundialTipo;
-use App\Models\Producto;
+use App\Models\MultiplataformaEquipo;
+use App\Models\MultiplataformaHorarioSlot;
+use App\Models\MultiplataformaPlataforma;
+use App\Models\MultiplataformaProducto;
+use App\Models\MultiplataformaPrioridad;
+use App\Models\MultiplataformaTipo;
 use App\Models\RedSocial;
 use App\Models\TipoProducto;
 use App\Models\User;
@@ -29,26 +28,26 @@ class PlanificadorController extends Controller
         $baseAllowedSchedule = $this->scheduleByDayZeroBased();
         $baseVisibleSchedule = $this->visibleHoursZeroBased();
         $empresaActivaId = app(EmpresaContext::class)->currentId();
-        $puedeEditarMundial = ! $this->isMundialReadOnlyUser(request()->user());
+        $puedeEditarMultiplataforma = ! $this->isMultiplataformaReadOnlyUser(request()->user());
 
-        return view('mundial.planificador', [
+        return view('multiplataforma.planificador', [
             'tiposProducto' => TipoProducto::query()
                 ->whereIn('slug', [TipoProducto::SLUG_CARRUSEL, TipoProducto::SLUG_REEL])
                 ->orderByRaw("FIELD(slug, ?, ?)", [TipoProducto::SLUG_CARRUSEL, TipoProducto::SLUG_REEL])
                 ->get(['id', 'nombre', 'slug']),
-            'mundialPrioridades' => MundialPrioridad::query()
+            'multiplataformaPrioridades' => MultiplataformaPrioridad::query()
                 ->where('activo', true)
                 ->orderBy('orden')
                 ->get(['id', 'nombre']),
-            'mundialPlataformas' => MundialPlataforma::query()
+            'multiplataformaPlataformas' => MultiplataformaPlataforma::query()
                 ->where('activo', true)
                 ->orderBy('orden')
                 ->get(['id', 'nombre']),
-            'mundialEquipos' => MundialEquipo::query()
+            'multiplataformaEquipos' => MultiplataformaEquipo::query()
                 ->where('activo', true)
                 ->orderBy('orden')
                 ->get(['id', 'nombre']),
-            'mundialTipos' => MundialTipo::query()
+            'multiplataformaTipos' => MultiplataformaTipo::query()
                 ->where('activo', true)
                 ->orderBy('orden')
                 ->get(['id', 'nombre']),
@@ -64,7 +63,7 @@ class PlanificadorController extends Controller
             'baseAllowedSchedule' => $baseAllowedSchedule,
             'baseVisibleSchedule' => $baseVisibleSchedule,
             'specialScheduleByDate' => [],
-            'puedeEditarMundial' => $puedeEditarMundial,
+            'puedeEditarMultiplataforma' => $puedeEditarMultiplataforma,
         ]);
     }
 
@@ -107,41 +106,27 @@ class PlanificadorController extends Controller
         $start = Carbon::parse($data['week_start'])->startOfDay();
         $end = (clone $start)->addDays(6)->endOfDay();
 
-        $items = MundialProducto::query()
+        $items = MultiplataformaProducto::query()
             ->with([
                 'user:id,name',
                 'editor:id,name',
                 'responsable2:id,name',
                 'manager:id,name',
                 'tipoProducto:id,nombre,slug',
-                'mundialPrioridad:id,nombre',
-                'mundialPlataforma:id,nombre',
-                'mundialEquipo:id,nombre',
-                'mundialTipo:id,nombre',
+                'multiplataformaPrioridad:id,nombre',
+                'multiplataformaPlataforma:id,nombre',
+                'multiplataformaEquipo:id,nombre',
+                'multiplataformaTipo:id,nombre',
             ])
             ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
             ->where('visible', true)
             ->orderBy('fecha')
             ->orderBy('hora')
             ->get()
-            ->map(fn (MundialProducto $producto): array => $this->serializeProducto($producto, $request->user()))
+            ->map(fn (MultiplataformaProducto $producto): array => $this->serializeProducto($producto, $request->user()))
             ->values();
 
-        $michipitiItems = Producto::query()
-            ->with([
-                'user:id,name',
-                'editor:id,name',
-                'responsable2:id,name',
-                'tipoProducto:id,nombre,slug',
-            ])
-            ->whereBetween('fecha', [$start->toDateString(), $end->toDateString()])
-            ->orderBy('fecha')
-            ->orderBy('hora')
-            ->get()
-            ->map(fn (Producto $producto): array => $this->serializeMichipitiProducto($producto))
-            ->values();
-
-        return response()->json($items->concat($michipitiItems)->values());
+        return response()->json($items);
     }
 
     public function periodistas(): JsonResponse
@@ -171,23 +156,23 @@ class PlanificadorController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        if ($this->isMundialReadOnlyUser($request->user())) {
+        if ($this->isMultiplataformaReadOnlyUser($request->user())) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Este rol solo puede ver el Especial Mundial.',
+                'message' => 'Este rol solo puede ver el Multiplataforma.',
             ], Response::HTTP_FORBIDDEN);
         }
 
         $data = $request->validate(
             [
-                'id' => ['nullable', 'integer', 'exists:mundial_productos,id'],
+                'id' => ['nullable', 'integer', 'exists:multiplataforma_productos,id'],
                 'fecha' => ['required', 'date'],
                 'hora' => ['required', 'date_format:H:i'],
-                'mundial_prioridad_id' => ['required', 'integer', Rule::exists('mundial_prioridades', 'id')->where(fn ($query) => $query->where('activo', true))],
-                'mundial_plataformas_ids' => ['required', 'array', 'min:1'],
-                'mundial_plataformas_ids.*' => ['integer', Rule::exists('mundial_plataformas', 'id')->where(fn ($query) => $query->where('activo', true))],
-                'mundial_equipo_id' => ['required', 'integer', Rule::exists('mundial_equipos', 'id')->where(fn ($query) => $query->where('activo', true))],
-                'mundial_tipo_id' => ['required', 'integer', Rule::exists('mundial_tipos', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'multiplataforma_prioridad_id' => ['required', 'integer', Rule::exists('multiplataforma_prioridades', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'multiplataforma_plataformas_ids' => ['required', 'array', 'min:1'],
+                'multiplataforma_plataformas_ids.*' => ['integer', Rule::exists('multiplataforma_plataformas', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'multiplataforma_equipo_id' => ['required', 'integer', Rule::exists('multiplataforma_equipos', 'id')->where(fn ($query) => $query->where('activo', true))],
+                'multiplataforma_tipo_id' => ['required', 'integer', Rule::exists('multiplataforma_tipos', 'id')->where(fn ($query) => $query->where('activo', true))],
                 'titulo' => ['required', 'string', 'max:200'],
                 'descripcion' => ['nullable', 'string'],
                 'auspicio' => ['nullable', 'string', 'max:600'],
@@ -212,16 +197,16 @@ class PlanificadorController extends Controller
                 'fecha.date' => 'La fecha seleccionada no es válida.',
                 'hora.required' => 'Debes seleccionar una hora.',
                 'hora.date_format' => 'La hora seleccionada no es válida.',
-                'mundial_prioridad_id.required' => 'Debes seleccionar una prioridad.',
-                'mundial_prioridad_id.exists' => 'La prioridad seleccionada no es válida.',
-                'mundial_plataformas_ids.required' => 'Debes seleccionar al menos una plataforma.',
-                'mundial_plataformas_ids.array' => 'Las plataformas seleccionadas no tienen un formato válido.',
-                'mundial_plataformas_ids.min' => 'Debes seleccionar al menos una plataforma.',
-                'mundial_plataformas_ids.*.exists' => 'Una de las plataformas seleccionadas no es válida.',
-                'mundial_equipo_id.required' => 'Debes seleccionar un equipo.',
-                'mundial_equipo_id.exists' => 'El equipo seleccionado no es válido.',
-                'mundial_tipo_id.required' => 'Debes seleccionar un tipo.',
-                'mundial_tipo_id.exists' => 'El tipo seleccionado no es válido.',
+                'multiplataforma_prioridad_id.required' => 'Debes seleccionar una prioridad.',
+                'multiplataforma_prioridad_id.exists' => 'La prioridad seleccionada no es válida.',
+                'multiplataforma_plataformas_ids.required' => 'Debes seleccionar al menos una plataforma.',
+                'multiplataforma_plataformas_ids.array' => 'Las plataformas seleccionadas no tienen un formato válido.',
+                'multiplataforma_plataformas_ids.min' => 'Debes seleccionar al menos una plataforma.',
+                'multiplataforma_plataformas_ids.*.exists' => 'Una de las plataformas seleccionadas no es válida.',
+                'multiplataforma_equipo_id.required' => 'Debes seleccionar un equipo.',
+                'multiplataforma_equipo_id.exists' => 'El equipo seleccionado no es válido.',
+                'multiplataforma_tipo_id.required' => 'Debes seleccionar un tipo.',
+                'multiplataforma_tipo_id.exists' => 'El tipo seleccionado no es válido.',
                 'titulo.required' => 'Debes ingresar un título.',
                 'titulo.max' => 'El título no puede superar los 200 caracteres.',
                 'auspicio.max' => 'El auspicio no puede superar los 600 caracteres.',
@@ -239,10 +224,10 @@ class PlanificadorController extends Controller
                 'asignado_a' => 'líder',
                 'responsable2_id' => 'responsable',
                 'edicion_id' => 'edición',
-                'mundial_prioridad_id' => 'prioridad',
-                'mundial_plataformas_ids' => 'plataformas',
-                'mundial_equipo_id' => 'equipo',
-                'mundial_tipo_id' => 'tipo',
+                'multiplataforma_prioridad_id' => 'prioridad',
+                'multiplataforma_plataformas_ids' => 'plataformas',
+                'multiplataforma_equipo_id' => 'equipo',
+                'multiplataforma_tipo_id' => 'tipo',
                 'tipo_producto_id' => 'tipo de producto',
                 'redes_sociales_ids' => 'redes sociales',
                 'etapa' => 'etapa',
@@ -251,8 +236,8 @@ class PlanificadorController extends Controller
         );
 
         $producto = $data['id']
-            ? MundialProducto::query()->findOrFail($data['id'])
-            : new MundialProducto();
+            ? MultiplataformaProducto::query()->findOrFail($data['id'])
+            : new MultiplataformaProducto();
         $isNew = ! $producto->exists;
         $estadoAnterior = $producto->estado;
         $origenAnterior = $producto->origen;
@@ -267,15 +252,15 @@ class PlanificadorController extends Controller
         $isAllowedSchedule = $this->isAllowedSchedule($data['fecha'], $data['hora']);
         $origen = $isAllowedSchedule ? 'propuesta' : 'pendiente';
 
-        $mundialPrioridad = MundialPrioridad::query()->findOrFail($data['mundial_prioridad_id']);
-        $mundialPlataformas = MundialPlataforma::query()
-            ->whereIn('id', collect($data['mundial_plataformas_ids'])->map(fn ($id) => (int) $id)->unique()->values())
+        $multiplataformaPrioridad = MultiplataformaPrioridad::query()->findOrFail($data['multiplataforma_prioridad_id']);
+        $multiplataformaPlataformas = MultiplataformaPlataforma::query()
+            ->whereIn('id', collect($data['multiplataforma_plataformas_ids'])->map(fn ($id) => (int) $id)->unique()->values())
             ->orderBy('orden')
             ->get();
-        $mundialPlataforma = $mundialPlataformas->first();
-        $mundialEquipo = MundialEquipo::query()->findOrFail($data['mundial_equipo_id']);
-        $mundialTipo = MundialTipo::query()->findOrFail($data['mundial_tipo_id']);
-        $isComercial = strcasecmp($mundialTipo->nombre, 'Comercial') === 0;
+        $multiplataformaPlataforma = $multiplataformaPlataformas->first();
+        $multiplataformaEquipo = MultiplataformaEquipo::query()->findOrFail($data['multiplataforma_equipo_id']);
+        $multiplataformaTipo = MultiplataformaTipo::query()->findOrFail($data['multiplataforma_tipo_id']);
+        $isComercial = strcasecmp($multiplataformaTipo->nombre, 'Comercial') === 0;
         $etapa = $data['etapa'] ?? 'Borrador';
 
         if ($etapa === 'Por entregar' && ! $isComercial) {
@@ -287,10 +272,10 @@ class PlanificadorController extends Controller
 
         if ($producto->exists && $producto->origen === 'pauta') {
             $seIntentoEditarCampoBloqueado =
-                ((int) $producto->mundial_prioridad_id !== (int) $data['mundial_prioridad_id']) ||
-                (collect($producto->mundial_plataformas_ids ?? [])->map(fn ($id) => (int) $id)->sort()->values()->all() !== collect($data['mundial_plataformas_ids'])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all()) ||
-                ((int) $producto->mundial_equipo_id !== (int) $data['mundial_equipo_id']) ||
-                ((int) $producto->mundial_tipo_id !== (int) $data['mundial_tipo_id']) ||
+                ((int) $producto->multiplataforma_prioridad_id !== (int) $data['multiplataforma_prioridad_id']) ||
+                (collect($producto->multiplataforma_plataformas_ids ?? [])->map(fn ($id) => (int) $id)->sort()->values()->all() !== collect($data['multiplataforma_plataformas_ids'])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all()) ||
+                ((int) $producto->multiplataforma_equipo_id !== (int) $data['multiplataforma_equipo_id']) ||
+                ((int) $producto->multiplataforma_tipo_id !== (int) $data['multiplataforma_tipo_id']) ||
                 ($producto->titulo !== $data['titulo']) ||
                 (($producto->copy ?? '') !== ($data['descripcion'] ?? '')) ||
                 (($producto->creditos ?? '') !== ($auspicio ?? '')) ||
@@ -304,11 +289,11 @@ class PlanificadorController extends Controller
 
         $producto->fill([
             'tipo_producto_id' => $this->resolveTipoProductoId((int) $data['tipo_producto_id']),
-            'mundial_prioridad_id' => $mundialPrioridad->id,
-            'mundial_plataforma_id' => $mundialPlataforma?->id,
-            'mundial_plataformas_ids' => $mundialPlataformas->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
-            'mundial_equipo_id' => $mundialEquipo->id,
-            'mundial_tipo_id' => $mundialTipo->id,
+            'multiplataforma_prioridad_id' => $multiplataformaPrioridad->id,
+            'multiplataforma_plataforma_id' => $multiplataformaPlataforma?->id,
+            'multiplataforma_plataformas_ids' => $multiplataformaPlataformas->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+            'multiplataforma_equipo_id' => $multiplataformaEquipo->id,
+            'multiplataforma_tipo_id' => $multiplataformaTipo->id,
             'user_id' => $data['asignado_a'] ?? $producto->user_id ?? $request->user()->id,
             'responsable2_id' => $data['responsable2_id'],
             'manager_id' => $data['edicion_id'] ?? null,
@@ -321,12 +306,12 @@ class PlanificadorController extends Controller
             'fecha' => $data['fecha'],
             'hora' => $data['hora'],
             'orden_dia' => $this->orderDiaFromTime($data['hora']),
-            'seccion' => $mundialEquipo->nombre,
+            'seccion' => $multiplataformaEquipo->nombre,
             'copy' => $data['descripcion'] ?? null,
             'referencia' => $etapa,
             'creditos' => $auspicio,
             'estado' => $data['estado'] ?: ($producto->estado ?: 'BORRADOR'),
-            'prioridad' => $mundialPrioridad->nombre,
+            'prioridad' => $multiplataformaPrioridad->nombre,
             'dificultad' => $producto->dificultad ?: 'BASICO',
             'origen' => $origen,
             'visible' => $visible,
@@ -343,10 +328,10 @@ class PlanificadorController extends Controller
             'responsable2:id,name',
             'manager:id,name',
             'tipoProducto:id,nombre,slug',
-            'mundialPrioridad:id,nombre',
-            'mundialPlataforma:id,nombre',
-            'mundialEquipo:id,nombre',
-            'mundialTipo:id,nombre',
+            'multiplataformaPrioridad:id,nombre',
+            'multiplataformaPlataforma:id,nombre',
+            'multiplataformaEquipo:id,nombre',
+            'multiplataformaTipo:id,nombre',
         ]);
         $publicacionEnOtrasEmpresas = ['creadas' => [], 'conflictos' => []];
 
@@ -376,7 +361,7 @@ class PlanificadorController extends Controller
             if ($directorIds !== []) {
                 $texto =
                     "────────────────────────\n".
-                    $this->formatMundialHeader($producto)."\n".
+                    $this->formatMultiplataformaHeader($producto)."\n".
                     "⚠️ Por aprobar fuera de pauta\n".
                     "Horario: {$data['fecha']} {$data['hora']}\n".
                     "────────────────────────\n";
@@ -397,12 +382,12 @@ class PlanificadorController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, MundialProducto $producto): JsonResponse
+    public function destroy(Request $request, MultiplataformaProducto $producto): JsonResponse
     {
-        if ($this->isMundialReadOnlyUser($request->user())) {
+        if ($this->isMultiplataformaReadOnlyUser($request->user())) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Este rol solo puede ver el Especial Mundial.',
+                'message' => 'Este rol solo puede ver el Multiplataforma.',
             ], Response::HTTP_FORBIDDEN);
         }
 
@@ -436,10 +421,10 @@ class PlanificadorController extends Controller
 
     public function move(Request $request): JsonResponse
     {
-        if ($this->isMundialReadOnlyUser($request->user())) {
+        if ($this->isMultiplataformaReadOnlyUser($request->user())) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Este rol solo puede ver el Especial Mundial.',
+                'message' => 'Este rol solo puede ver el Multiplataforma.',
             ], Response::HTTP_FORBIDDEN);
         }
 
@@ -452,7 +437,7 @@ class PlanificadorController extends Controller
 
         $data = $request->validate(
             [
-                'producto_id' => ['required', 'integer', 'exists:mundial_productos,id'],
+                'producto_id' => ['required', 'integer', 'exists:multiplataforma_productos,id'],
                 'source_key' => ['required', 'string'],
                 'target_key' => ['required', 'string'],
             ],
@@ -474,7 +459,7 @@ class PlanificadorController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $source = MundialProducto::query()->findOrFail($data['producto_id']);
+        $source = MultiplataformaProducto::query()->findOrFail($data['producto_id']);
         $sourceOriginalDate = optional($source->fecha)->format('Y-m-d');
         $sourceOriginalTime = $source->hora ? Carbon::parse($source->hora)->format('H:i') : null;
         $sourceEstadoAnterior = $source->estado;
@@ -521,10 +506,10 @@ class PlanificadorController extends Controller
 
     public function approve(Request $request): JsonResponse
     {
-        if ($this->isMundialReadOnlyUser($request->user())) {
+        if ($this->isMultiplataformaReadOnlyUser($request->user())) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Este rol solo puede ver el Especial Mundial.',
+                'message' => 'Este rol solo puede ver el Multiplataforma.',
             ], Response::HTTP_FORBIDDEN);
         }
 
@@ -537,7 +522,7 @@ class PlanificadorController extends Controller
 
         $data = $request->validate(
             [
-                'id' => ['required', 'integer', 'exists:mundial_productos,id'],
+                'id' => ['required', 'integer', 'exists:multiplataforma_productos,id'],
             ],
             [
                 'id.required' => 'No se recibió el producto a aprobar.',
@@ -545,7 +530,7 @@ class PlanificadorController extends Controller
             ],
         );
 
-        $producto = MundialProducto::query()->findOrFail($data['id']);
+        $producto = MultiplataformaProducto::query()->findOrFail($data['id']);
         $estadoAnterior = $producto->estado;
         $origenAnterior = $producto->origen;
 
@@ -580,16 +565,16 @@ class PlanificadorController extends Controller
 
     public function toPauta(Request $request): JsonResponse
     {
-        if ($this->isMundialReadOnlyUser($request->user())) {
+        if ($this->isMultiplataformaReadOnlyUser($request->user())) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Este rol solo puede ver el Especial Mundial.',
+                'message' => 'Este rol solo puede ver el Multiplataforma.',
             ], Response::HTTP_FORBIDDEN);
         }
 
         $data = $request->validate(
             [
-                'propuesta_id' => ['required', 'integer', 'exists:mundial_productos,id'],
+                'propuesta_id' => ['required', 'integer', 'exists:multiplataforma_productos,id'],
                 'asignado_a' => ['required', 'integer', 'exists:users,id'],
             ],
             [
@@ -600,7 +585,7 @@ class PlanificadorController extends Controller
             ],
         );
 
-        $producto = MundialProducto::query()->findOrFail($data['propuesta_id']);
+        $producto = MultiplataformaProducto::query()->findOrFail($data['propuesta_id']);
         $estadoAnterior = $producto->estado;
         $origenAnterior = $producto->origen;
 
@@ -636,27 +621,27 @@ class PlanificadorController extends Controller
         ]);
     }
 
-    private function serializeProducto(MundialProducto $producto, User $user): array
+    private function serializeProducto(MultiplataformaProducto $producto, User $user): array
     {
         return [
-            'source' => 'mundial',
-            'uid' => 'mundial:'.$producto->id,
+            'source' => 'multiplataforma',
+            'uid' => 'multiplataforma:'.$producto->id,
             'id' => $producto->id,
             'tipo_producto_id' => $producto->tipo_producto_id,
             'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
             'tipo_producto_slug' => $producto->tipoProducto?->slug,
-            'mundial_prioridad_id' => $producto->mundial_prioridad_id,
-            'mundial_prioridad_nombre' => $producto->mundialPrioridad?->nombre,
-            'mundial_plataforma_id' => $producto->mundial_plataforma_id,
-            'mundial_plataformas_ids' => collect($producto->mundial_plataformas_ids ?? [])
+            'multiplataforma_prioridad_id' => $producto->multiplataforma_prioridad_id,
+            'multiplataforma_prioridad_nombre' => $producto->multiplataformaPrioridad?->nombre,
+            'multiplataforma_plataforma_id' => $producto->multiplataforma_plataforma_id,
+            'multiplataforma_plataformas_ids' => collect($producto->multiplataforma_plataformas_ids ?? [])
                 ->map(fn ($id) => (int) $id)
                 ->values()
                 ->all(),
-            'mundial_plataforma_nombre' => $this->mundialPlataformasLabel($producto),
-            'mundial_equipo_id' => $producto->mundial_equipo_id,
-            'mundial_equipo_nombre' => $producto->mundialEquipo?->nombre,
-            'mundial_tipo_id' => $producto->mundial_tipo_id,
-            'mundial_tipo_nombre' => $producto->mundialTipo?->nombre,
+            'multiplataforma_plataforma_nombre' => $this->multiplataformaPlataformasLabel($producto),
+            'multiplataforma_equipo_id' => $producto->multiplataforma_equipo_id,
+            'multiplataforma_equipo_nombre' => $producto->multiplataformaEquipo?->nombre,
+            'multiplataforma_tipo_id' => $producto->multiplataforma_tipo_id,
+            'multiplataforma_tipo_nombre' => $producto->multiplataformaTipo?->nombre,
             'redes_sociales_ids' => collect($producto->redes_sociales_ids ?? [])
                 ->map(fn ($id) => (int) $id)
                 ->values()
@@ -687,53 +672,19 @@ class PlanificadorController extends Controller
         ];
     }
 
-    private function serializeMichipitiProducto(Producto $producto): array
+    private function canDeleteProducto(User $user, MultiplataformaProducto $producto): bool
     {
-        return [
-            'source' => 'michipiti',
-            'uid' => 'michipiti:'.$producto->id,
-            'id' => $producto->id,
-            'tipo_producto_id' => $producto->tipo_producto_id,
-            'tipo_producto_nombre' => $producto->tipoProducto?->nombre,
-            'tipo_producto_slug' => $producto->tipoProducto?->slug,
-            'redes_sociales_ids' => collect($producto->redes_sociales_ids ?? [])
-                ->map(fn ($id) => (int) $id)
-                ->values()
-                ->all(),
-            'fecha' => optional($producto->fecha)->format('Y-m-d'),
-            'hora' => $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : null,
-            'titulo' => $producto->titulo,
-            'descripcion' => $producto->copy,
-            'seccion' => $producto->seccion,
-            'estado' => $producto->estado,
-            'origen' => $producto->origen,
-            'asignado_a' => $producto->user_id,
-            'responsable_nombre' => $producto->user?->name,
-            'responsable2_id' => $producto->responsable2_id,
-            'responsable2_nombre' => $producto->responsable2?->name,
-            'link' => $producto->referencia,
-            'canva_url' => $producto->canva_url,
-            'prioridad' => $producto->prioridad,
-            'dificultad' => $producto->dificultad,
-            'assigned_at' => optional($producto->assigned_at)->toDateTimeString(),
-            'updated_at' => optional($producto->updated_at)->toDateTimeString(),
-            'can_delete' => false,
-        ];
+        return ! $this->isMultiplataformaReadOnlyUser($user) && $user->hasAnyRole(['director', 'editor']);
     }
 
-    private function canDeleteProducto(User $user, MundialProducto $producto): bool
-    {
-        return ! $this->isMundialReadOnlyUser($user) && $user->hasAnyRole(['director', 'editor']);
-    }
-
-    private function deleteDeniedMessage(User $user, MundialProducto $producto): string
+    private function deleteDeniedMessage(User $user, MultiplataformaProducto $producto): string
     {
         return 'Solo los roles director y editor pueden eliminar productos.';
     }
 
-    private function isMundialReadOnlyUser(?User $user): bool
+    private function isMultiplataformaReadOnlyUser(?User $user): bool
     {
-        return $user && $user->hasRole('mundial_lectura') && $user->getRoleNames()->count() === 1;
+        return $user && $user->hasRole('multiplataforma_lectura') && $user->getRoleNames()->count() === 1;
     }
 
     private function resolveTipoProductoId(?int $tipoProductoId = null): int
@@ -763,7 +714,7 @@ class PlanificadorController extends Controller
      * @param  array<string, mixed>  $data CONTROL GIT
      * @return array{creadas: list<string>, conflictos: list<string>}
      */
-    private function replicarProductoEnEmpresas(MundialProducto $producto, array $data, Request $request): array
+    private function replicarProductoEnEmpresas(MultiplataformaProducto $producto, array $data, Request $request): array
     {
         $empresaIds = collect($data['publicar_tambien_en'] ?? [])
             ->map(fn ($id) => (int) $id)
@@ -789,7 +740,7 @@ class PlanificadorController extends Controller
         $conflictos = [];
 
         foreach ($empresas as $empresa) {
-            $ocupado = MundialProducto::withoutGlobalScope('empresa_activa')
+            $ocupado = MultiplataformaProducto::withoutGlobalScope('empresa_activa')
                 ->where('empresa_id', $empresa->id)
                 ->whereDate('fecha', $data['fecha'])
                 ->whereTime('hora', $data['hora'])
@@ -810,14 +761,14 @@ class PlanificadorController extends Controller
                 continue;
             }
 
-            $clon = new MundialProducto();
+            $clon = new MultiplataformaProducto();
             $clon->empresa_id = $empresa->id;
             $clon->tipo_producto_id = $tipoDestino->id;
-            $clon->mundial_prioridad_id = $producto->mundial_prioridad_id;
-            $clon->mundial_plataforma_id = $producto->mundial_plataforma_id;
-            $clon->mundial_plataformas_ids = $producto->mundial_plataformas_ids;
-            $clon->mundial_equipo_id = $producto->mundial_equipo_id;
-            $clon->mundial_tipo_id = $producto->mundial_tipo_id;
+            $clon->multiplataforma_prioridad_id = $producto->multiplataforma_prioridad_id;
+            $clon->multiplataforma_plataforma_id = $producto->multiplataforma_plataforma_id;
+            $clon->multiplataforma_plataformas_ids = $producto->multiplataforma_plataformas_ids;
+            $clon->multiplataforma_equipo_id = $producto->multiplataforma_equipo_id;
+            $clon->multiplataforma_tipo_id = $producto->multiplataforma_tipo_id;
             $clon->user_id = $producto->user_id;
             $clon->responsable2_id = $producto->responsable2_id;
             $clon->redes_sociales_ids = $producto->redes_sociales_ids;
@@ -870,7 +821,7 @@ class PlanificadorController extends Controller
      */
     private function visibleHoursZeroBased(): array
     {
-        $dbSchedule = MundialHorarioSlot::query()
+        $dbSchedule = MultiplataformaHorarioSlot::query()
             ->where('visible', true)
             ->orderBy('hora')
             ->get(['dia_semana', 'hora'])
@@ -901,7 +852,7 @@ class PlanificadorController extends Controller
      */
     private function scheduleByDayZeroBased(): array
     {
-        $dbSchedule = MundialHorarioSlot::query()
+        $dbSchedule = MultiplataformaHorarioSlot::query()
             ->where('visible', true)
             ->where('fuera_de_pauta', false)
             ->orderBy('hora')
@@ -984,30 +935,30 @@ class PlanificadorController extends Controller
         return Carbon::parse("{$date} {$time}")->lt(now());
     }
 
-    private function formatMundialHeader(MundialProducto $producto): string
+    private function formatMultiplataformaHeader(MultiplataformaProducto $producto): string
     {
-        $titulo = $producto->titulo ?: ('Mundial #'.$producto->id);
+        $titulo = $producto->titulo ?: ('Multiplataforma #'.$producto->id);
         $responsable = $producto->user?->name ?? 'Sin responsable';
 
         return "🏆 *{$titulo}* (ID: {$producto->id})\n👤 Responsable: {$responsable}";
     }
 
-    private function mundialPlataformasLabel(MundialProducto $producto): ?string
+    private function multiplataformaPlataformasLabel(MultiplataformaProducto $producto): ?string
     {
-        $ids = collect($producto->mundial_plataformas_ids ?? [])
+        $ids = collect($producto->multiplataforma_plataformas_ids ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->values();
 
-        if ($ids->isEmpty() && $producto->mundialPlataforma) {
-            return $producto->mundialPlataforma->nombre;
+        if ($ids->isEmpty() && $producto->multiplataformaPlataforma) {
+            return $producto->multiplataformaPlataforma->nombre;
         }
 
         if ($ids->isEmpty()) {
             return null;
         }
 
-        return MundialPlataforma::query()
+        return MultiplataformaPlataforma::query()
             ->whereIn('id', $ids)
             ->orderBy('orden')
             ->pluck('nombre')
@@ -1018,7 +969,7 @@ class PlanificadorController extends Controller
      * @param  array<string, mixed>|null  $meta
      */
     private function registrarMovimiento(
-        MundialProducto $producto,
+        MultiplataformaProducto $producto,
         User $user,
         string $accion,
         ?string $estadoAnterior,

@@ -87,6 +87,7 @@ class PlanificadorController extends Controller
     {
         $users = User::query()
             ->select('id', 'name')
+            ->where('activo', 1)
             ->whereHas('roles', fn ($query) => $query->whereIn('name', $this->audiovisualStaffRoles()))
             ->orderBy('name')
             ->get();

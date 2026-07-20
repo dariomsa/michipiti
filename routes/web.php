@@ -12,6 +12,8 @@ use App\Http\Controllers\HorarioSlotController;
 use App\Http\Controllers\Manager\ProductoController as ManagerProductoController;
 use App\Http\Controllers\Mundial\ProductoController as MundialProductoController;
 use App\Http\Controllers\Mundial\PlanificadorController as MundialPlanificadorController;
+use App\Http\Controllers\Multiplataforma\ProductoController as MultiplataformaProductoController;
+use App\Http\Controllers\Multiplataforma\PlanificadorController as MultiplataformaPlanificadorController;
 use App\Http\Controllers\PautaController;
 use App\Http\Controllers\PlanificadorController;
 use App\Http\Controllers\Periodista\ProductoController as PeriodistaProductoController;
@@ -78,6 +80,17 @@ Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::post('/mundial/planificador/aprobar', [MundialPlanificadorController::class, 'approve']);
     Route::post('/mundial/planificador/to-pauta', [MundialPlanificadorController::class, 'toPauta']);
     Route::delete('/mundial/planificador/{producto}', [MundialPlanificadorController::class, 'destroy']);
+    Route::get('/multiplataforma/listado', [MultiplataformaProductoController::class, 'index'])->name('multiplataforma.index');
+    Route::post('/multiplataforma/listado/{producto}/metricool', [MultiplataformaProductoController::class, 'metricool'])->name('multiplataforma.metricool');
+    Route::get('/multiplataforma/planificador', [MultiplataformaPlanificadorController::class, 'index'])->name('multiplataforma.planificador');
+    Route::get('/multiplataforma/planificador/week', [MultiplataformaPlanificadorController::class, 'week']);
+    Route::get('/multiplataforma/planificador/periodistas', [MultiplataformaPlanificadorController::class, 'periodistas']);
+    Route::get('/multiplataforma/planificador/videografos', [MultiplataformaPlanificadorController::class, 'videografos']);
+    Route::post('/multiplataforma/planificador/store', [MultiplataformaPlanificadorController::class, 'store']);
+    Route::post('/multiplataforma/planificador/move', [MultiplataformaPlanificadorController::class, 'move']);
+    Route::post('/multiplataforma/planificador/aprobar', [MultiplataformaPlanificadorController::class, 'approve']);
+    Route::post('/multiplataforma/planificador/to-pauta', [MultiplataformaPlanificadorController::class, 'toPauta']);
+    Route::delete('/multiplataforma/planificador/{producto}', [MultiplataformaPlanificadorController::class, 'destroy']);
 
     Route::middleware('not.mundial_readonly')->group(function (): void {
         Route::get('/dashboard', [DirectorDashboardController::class, 'index'])->name('dashboard');

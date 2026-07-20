@@ -2,18 +2,18 @@
 
 namespace App\Observers;
 
-use App\Models\MundialMovimiento;
+use App\Models\MultiplataformaMovimiento;
 use App\Models\User;
-use App\Services\Mundial\MundialSlackNotifier;
+use App\Services\Multiplataforma\MultiplataformaSlackNotifier;
 use Carbon\Carbon;
 
-class MundialMovimientoObserver
+class MultiplataformaMovimientoObserver
 {
     private const SLACK_MOVIMIENTOS_USER_ID = 1;
 
-    public function created(MundialMovimiento $movimiento): void
+    public function created(MultiplataformaMovimiento $movimiento): void
     {
-        $producto = $movimiento->mundialProducto()
+        $producto = $movimiento->multiplataformaProducto()
             ->with(['user:id,name', 'responsable2:id,name'])
             ->first();
 
@@ -21,11 +21,11 @@ class MundialMovimientoObserver
             return;
         }
 
-        $notifier = app(MundialSlackNotifier::class);
+        $notifier = app(MultiplataformaSlackNotifier::class);
         $autor = $movimiento->user?->name ?? 'Usuario';
         $accion = ucwords(strtolower(str_replace('_', ' ', (string) ($movimiento->accion ?? 'Movimiento'))));
         $mentions = $notifier->mentionsInvolucrados($producto);
-        $heading = trim(':trophy: Especial Mundial '.$mentions);
+        $heading = trim(':newspaper: Multiplataforma '.$mentions);
         $motivo = $movimiento->motivo ? "Motivo: {$movimiento->motivo}\n" : '';
         $fecha = optional($producto->fecha)->format('Y-m-d') ?: 'Sin fecha';
         $hora = $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : 'Sin hora';
@@ -40,7 +40,7 @@ class MundialMovimientoObserver
             "Publicacion: {$fecha} {$hora}\n".
             $sep;
 
-        //$notifier->notifyInvolucrados($producto, $texto, $movimiento->user_id ? (int) $movimiento->user_id : null);
+        $notifier->notifyInvolucrados($producto, $texto, $movimiento->user_id ? (int) $movimiento->user_id : null);
 
         $destinatario = User::query()->find(self::SLACK_MOVIMIENTOS_USER_ID);
 

@@ -7,20 +7,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Producto extends Model
+class MultiplataformaProducto extends Model
 {
     use BelongsToEmpresa;
     use HasFactory;
+
+    protected $table = 'multiplataforma_productos';
 
     /**
      * @var list<string>
      */
     protected $fillable = [
         'empresa_id',
-        'mundial_id',
-        'multiplataforma_id',
         'tipo_producto_id',
+        'multiplataforma_prioridad_id',
+        'multiplataforma_plataforma_id',
+        'multiplataforma_plataformas_ids',
+        'multiplataforma_equipo_id',
+        'multiplataforma_tipo_id',
         'user_id',
         'responsable2_id',
         'redes_sociales_ids',
@@ -44,6 +50,7 @@ class Producto extends Model
         'origen',
         'pauta_comercial',
         'programado_metricool',
+        'visible',
     ];
 
     /**
@@ -57,6 +64,8 @@ class Producto extends Model
             'orden_dia' => 'integer',
             'pauta_comercial' => 'boolean',
             'programado_metricool' => 'boolean',
+            'visible' => 'boolean',
+            'multiplataforma_plataformas_ids' => 'array',
             'redes_sociales_ids' => 'array',
         ];
     }
@@ -66,14 +75,24 @@ class Producto extends Model
         return $this->belongsTo(TipoProducto::class);
     }
 
-    public function mundialProducto(): BelongsTo
+    public function multiplataformaPrioridad(): BelongsTo
     {
-        return $this->belongsTo(MundialProducto::class, 'mundial_id');
+        return $this->belongsTo(MultiplataformaPrioridad::class);
     }
 
-    public function multiplataformaProducto(): BelongsTo
+    public function multiplataformaPlataforma(): BelongsTo
     {
-        return $this->belongsTo(MultiplataformaProducto::class, 'multiplataforma_id');
+        return $this->belongsTo(MultiplataformaPlataforma::class);
+    }
+
+    public function multiplataformaEquipo(): BelongsTo
+    {
+        return $this->belongsTo(MultiplataformaEquipo::class);
+    }
+
+    public function multiplataformaTipo(): BelongsTo
+    {
+        return $this->belongsTo(MultiplataformaTipo::class);
     }
 
     public function user(): BelongsTo
@@ -101,23 +120,13 @@ class Producto extends Model
         return $this->belongsTo(User::class, 'manager_id');
     }
 
-    public function laminas(): HasMany
-    {
-        return $this->hasMany(CarruselLamina::class, 'carrusel_id')->orderBy('orden');
-    }
-
-    public function mensajes(): HasMany
-    {
-        return $this->hasMany(CarruselMensaje::class, 'carrusel_id')->latest('id');
-    }
-
     public function movimientos(): HasMany
     {
-        return $this->hasMany(CarruselMovimiento::class, 'carrusel_id')->latest('id');
+        return $this->hasMany(MultiplataformaMovimiento::class, 'multiplataforma_producto_id')->latest('id');
     }
 
-    public function esCarrusel(): bool
+    public function productoConvertido(): HasOne
     {
-        return $this->tipoProducto?->slug === TipoProducto::SLUG_CARRUSEL;
+        return $this->hasOne(Producto::class, 'multiplataforma_id');
     }
 }

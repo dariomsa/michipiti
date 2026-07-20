@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RolesSeeder::class,
             CatalogoBaseSeeder::class,
             TipoAudiovisualSeeder::class,
+            MultiplataformaCatalogosSeeder::class,
         ]);
 
         $user = User::query()->firstOrCreate([

@@ -146,6 +146,7 @@ class PlanificadorController extends Controller
     {
         $users = User::query()
             ->select('id', 'name')
+            ->where('activo', 1)
             ->whereHas('roles')
             ->where('email', 'not like', '%@admin.com')
             ->orderBy('name')
