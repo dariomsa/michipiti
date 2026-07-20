@@ -6,7 +6,7 @@
    
     <div class="grid flex-1 items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <section class="rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-[0_30px_80px_rgba(28,25,23,0.08)] backdrop-blur">
-            <p class="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">version 2.0</p>
+            <p class="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">version 3.0</p>
      <div class="card-header text-center">
         <img src="https://michipiti.elcomercio.com/images/chatmichipiti-logo.svg" alt="Chat Michipiti" style="max-width:220px; width:100%; height:auto;">
           </div>
