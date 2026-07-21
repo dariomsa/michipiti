@@ -19,10 +19,15 @@ class ProductoController extends BaseProductoController
         return ['ASIGNADO', 'FINALIZADO', 'APROBADO'];
     }
 
-    public function edit(Producto $producto): View
+    public function edit(Producto $producto): View|RedirectResponse
     {
         abort_unless($this->puedeEntrarAlEditor($producto), 404);
         abort_unless($this->puedeGestionarProducto(request()->user(), $producto), 403);
+
+        if ($this->debeUsarRutaPeriodista(request(), $producto)) {
+            return redirect()->route('periodista.productos.edit', $producto);
+        }
+
         abort_unless(in_array($producto->estado, $this->estadosEditables(), true), 403);
 
         $producto->load([
@@ -151,5 +156,14 @@ class ProductoController extends BaseProductoController
             'updated_at' => optional($producto->updated_at)->toISOString(),
             'message' => 'Guardado automáticamente.',
         ]);
+    }
+
+    protected function debeUsarRutaPeriodista(Request $request, Producto $producto): bool
+    {
+        $user = $request->user();
+
+        return ($user?->hasAllRoles(['disenador', 'periodista']) ?? false)
+            && (int) $producto->user_id === (int) $user->id
+            && in_array($producto->estado, ['BORRADOR', 'DEVUELTO'], true);
     }
 }

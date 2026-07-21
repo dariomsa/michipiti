@@ -175,8 +175,10 @@
               @php
                 $dotColor = '#9e9e9e';
                 $label = $producto->estado;
-                $esEditor = auth()->user()?->hasRole('editor');
-                $esDisenador = auth()->user()?->hasAnyRole(['disenador', 'disenador_manager']);
+                $routeName = (string) optional(request()->route())->getName();
+                $routeRole = str_starts_with($routeName, 'periodista.') ? 'periodista' : null;
+                $esEditor = $routeRole === 'periodista' ? false : (auth()->user()?->hasRole('editor') ?? false);
+                $esDisenador = $routeRole === 'periodista' ? false : (auth()->user()?->hasAnyRole(['disenador', 'disenador_manager']) ?? false);
 
                 if ($producto->estado === 'APROBADO') $dotColor = '#2e7d32';
                 if ($producto->estado === 'EN_REVISION') $dotColor = '#f9a825';

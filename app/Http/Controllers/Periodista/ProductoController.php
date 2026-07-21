@@ -118,7 +118,7 @@ class ProductoController extends Controller
         return view($this->viewPath(request(), 'create'));
     }
 
-    public function edit(Producto $producto): View
+    public function edit(Producto $producto): View|RedirectResponse
     {
         abort_unless($this->puedeEntrarAlEditor($producto), 404);
         abort_unless($this->puedeGestionarProducto(request()->user(), $producto), 403);
@@ -419,10 +419,12 @@ class ProductoController extends Controller
     protected function accionesDisponibles(): array
     {
         $producto = request()->route('producto');
-        $revisionTarget = $producto instanceof Producto
+        $revisionTarget = $this->roleFromRoute(request()) === 'periodista'
+            ? 'EN_REVISION'
+            : ($producto instanceof Producto
             && $producto->estado === 'EN_REVISION'
             ? 'EN_DISENO'
-            : 'EN_REVISION';
+            : 'EN_REVISION');
 
         return [
             'guardar' => '__KEEP_STATE__',
@@ -661,6 +663,15 @@ class ProductoController extends Controller
     protected function puedeEditarProducto(Producto $producto): bool
     {
         $user = request()->user();
+        $routeRole = $this->roleFromRoute(request());
+
+        if ($routeRole === 'periodista') {
+            return in_array($producto->estado, ['BORRADOR', 'DEVUELTO'], true);
+        }
+
+        if ($routeRole === 'disenador') {
+            return $producto->estado === 'EN_DISENO';
+        }
 
         if ($user?->hasAnyRole(['editor', 'director'])) {
             return in_array($producto->estado, ['BORRADOR', 'EN_REVISION', 'DEVUELTO'], true);
@@ -695,6 +706,16 @@ class ProductoController extends Controller
 
     protected function puedeVerTodosLosProductos(?User $user): bool
     {
+        $routeRole = $this->roleFromRoute(request());
+
+        if ($routeRole === 'periodista') {
+            return false;
+        }
+
+        if ($routeRole === 'disenador') {
+            return true;
+        }
+
         return $user?->hasAnyRole(['editor', 'director', 'disenador', 'disenador_manager']) ?? false;
     }
 
@@ -747,6 +768,10 @@ class ProductoController extends Controller
             return 'manager.productos';
         }
 
+        if (str_starts_with($routeName, 'periodista.')) {
+            return 'periodista.productos';
+        }
+
         if ($user?->hasRole('director')) {
             return 'director.productos';
         }
@@ -764,6 +789,20 @@ class ProductoController extends Controller
         }
 
         return 'periodista.productos';
+    }
+
+    protected function roleFromRoute(Request $request): ?string
+    {
+        $routeName = (string) optional($request->route())->getName();
+
+        return match (true) {
+            str_starts_with($routeName, 'periodista.') => 'periodista',
+            str_starts_with($routeName, 'disenador.') => 'disenador',
+            str_starts_with($routeName, 'manager.') => 'disenador_manager',
+            str_starts_with($routeName, 'editor.') => 'editor',
+            str_starts_with($routeName, 'director.') => 'director',
+            default => null,
+        };
     }
 
     protected function filtersSessionKey(string $routeBase): string

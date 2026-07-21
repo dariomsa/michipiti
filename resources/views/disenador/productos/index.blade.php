@@ -177,6 +177,12 @@
                 $label = $producto->estado;
                 $esEditor = auth()->user()?->hasRole('editor');
                 $esDisenador = auth()->user()?->hasAnyRole(['disenador', 'disenador_manager']);
+                $debeAbrirComoPeriodista = auth()->user()?->hasAllRoles(['disenador', 'periodista'])
+                  && (int) $producto->user_id === (int) auth()->id()
+                  && in_array($producto->estado, ['BORRADOR', 'DEVUELTO'], true);
+                $editUrl = $debeAbrirComoPeriodista
+                  ? route('periodista.productos.edit', $producto->id)
+                  : route($routeBase.'.edit', $producto->id);
 
                 if ($producto->estado === 'APROBADO') $dotColor = '#2e7d32';
                 if ($producto->estado === 'EN_REVISION') $dotColor = '#f9a825';
@@ -195,7 +201,7 @@
               <tr>
                 <td style="padding:16px;">
                   <a
-                    href="{{ route($routeBase.'.edit', $producto->id) }}"
+                    href="{{ $editUrl }}"
                     class="text-decoration-none"
                     style="color:#1a73e8; font-weight:500;"
                   >
@@ -249,7 +255,7 @@
 
                 <td style="padding:16px;">
                   @if($puedeEditar)
-                    <a href="{{ route($routeBase.'.edit', $producto->id) }}"
+                    <a href="{{ $editUrl }}"
                        class="btn btn-sm action-btn-edit"
                        style="border-radius:0;"
                        title="Editar"
@@ -257,7 +263,7 @@
                       <i class="bi bi-pencil-square"></i>
                     </a>
                   @elseif($puedeVer)
-                    <a href="{{ route($routeBase.'.edit', $producto->id) }}"
+                    <a href="{{ $editUrl }}"
                        class="btn btn-sm action-btn-view"
                        style="border-radius:0;"
                        title="Ver"

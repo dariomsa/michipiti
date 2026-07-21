@@ -219,7 +219,9 @@
 @section('content')
 @php
   $laminasRows = old('laminas', $laminasData);
-  $isEditor = auth()->user()?->hasRole('editor');
+  $routeName = (string) optional(request()->route())->getName();
+  $routeRole = str_starts_with($routeName, 'periodista.') ? 'periodista' : null;
+  $isEditor = $routeRole === 'periodista' ? false : (auth()->user()?->hasRole('editor') ?? false);
   $isRevisionEditableByEditor = $isEditor && in_array($producto->estado, ['BORRADOR', 'EN_REVISION'], true);
 @endphp
 
