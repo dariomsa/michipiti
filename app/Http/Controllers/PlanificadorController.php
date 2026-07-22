@@ -241,16 +241,16 @@ class PlanificadorController extends Controller
         }
 
         if ($producto->exists && $producto->origen === 'pauta') {
-            $seIntentoEditarCampoBloqueado =
-                ($producto->seccion !== $data['seccion']) ||
-                ($producto->titulo !== $data['titulo']) ||
-                (($producto->copy ?? '') !== ($data['descripcion'] ?? '')) ||
-                ((int) $producto->tipo_producto_id !== (int) $data['tipo_producto_id']) ||
-                ($producto->origen !== $origen);
-
-            if ($seIntentoEditarCampoBloqueado) {
-                throw new HttpException(422, 'Los productos que ya están en pauta solo permiten cambiar responsable y referencia.');
-            }
+            $data['fecha'] = optional($producto->fecha)->format('Y-m-d');
+            $data['hora'] = $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : $data['hora'];
+            $data['seccion'] = $producto->seccion;
+            $data['titulo'] = $producto->titulo;
+            $data['descripcion'] = $producto->copy;
+            $data['estado'] = $producto->estado;
+            $data['tipo_producto_id'] = $producto->tipo_producto_id;
+            $data['redes_sociales_ids'] = $producto->redes_sociales_ids ?? [];
+            $data['publicar_tambien_en'] = [];
+            $origen = 'pauta';
         }
 
         $producto->fill([
