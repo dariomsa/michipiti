@@ -55,6 +55,7 @@
   .date-nav .btn-date{align-items:center;background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--blue);display:inline-flex;font-size:12px;font-weight:800;height:30px;justify-content:center;min-width:30px;padding:0 10px;text-decoration:none;}
   .date-nav .btn-date:hover{border-color:var(--blue2);color:var(--blue2);}
   .date-nav input{background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--ink);font-size:12px;font-weight:700;height:30px;padding:0 8px;width:128px;}
+  .date-filter-bar{align-items:center;display:flex;justify-content:flex-end;margin-top:14px;}
   .mrow{display:grid;grid-template-columns:78px 1fr;gap:14px;margin-bottom:11px;}
   .mtime{border-right:2px solid var(--line);padding-right:12px;padding-top:13px;text-align:right;}
   .mtime b{display:block;font-family:Georgia, 'Times New Roman', serif;font-size:19px;line-height:1;}
@@ -119,6 +120,7 @@
     .multiplataforma-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
     .filter-label{width:100%;}
     .date-head{align-items:flex-start;flex-direction:column;}
+    .date-filter-bar{justify-content:flex-start;}
     .mrow{grid-template-columns:62px 1fr;gap:10px;}
   }
 
@@ -153,6 +155,10 @@
   };
   $fmtDate = fn ($date) => $date ? ucfirst($date->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY')) : 'Sin fecha';
   $fmtTime = fn ($time) => $time ? \Carbon\Carbon::parse($time)->format('H\hi') : '--';
+  $dateNavIso = $filters['fecha'] !== '' ? $filters['fecha'] : \Illuminate\Support\Carbon::today()->toDateString();
+  $dateNav = \Illuminate\Support\Carbon::parse($dateNavIso);
+  $prevDate = $dateNav->copy()->subDay()->format('Y-m-d');
+  $nextDate = $dateNav->copy()->addDay()->format('Y-m-d');
   $puedeEditarMultiplataforma = $puedeEditarMultiplataforma ?? true;
   $canEditDateTime = $puedeEditarMultiplataforma && (auth()->user()?->hasRole('director') ?? false);
   $plataformaIconMap = [
@@ -253,13 +259,31 @@
       </div>
     </div>
 
+    <div class="date-filter-bar">
+      <form class="date-nav" method="GET" action="{{ route('multiplataforma.index') }}">
+        @foreach($filters as $filterKey => $filterValue)
+          @if($filterKey !== 'fecha' && $filterValue !== '' && $filterValue !== 0 && $filterValue !== null)
+            <input type="hidden" name="{{ $filterKey }}" value="{{ $filterValue }}">
+          @endif
+        @endforeach
+        <a class="btn-date" href="{{ $chipUrl(['fecha' => $prevDate]) }}" aria-label="Día anterior">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+        <input type="date" name="fecha" value="{{ $dateNavIso }}" onchange="this.form.submit()" aria-label="Seleccionar fecha">
+        <a class="btn-date" href="{{ $chipUrl(['fecha' => $nextDate]) }}" aria-label="Día siguiente">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+        @if($filters['fecha'] !== '')
+          <a class="btn-date" href="{{ $chipUrl(['fecha' => '']) }}">Todos</a>
+        @endif
+      </form>
+    </div>
+
     @forelse($productos->getCollection()->groupBy(fn ($producto) => optional($producto->fecha)->format('Y-m-d') ?: 'sin-fecha') as $fechaKey => $items)
       @php
         $first = $items->first();
         $fechaGrupo = $first->fecha;
         $fechaIso = optional($fechaGrupo)->format('Y-m-d');
-        $prevDate = $fechaGrupo ? $fechaGrupo->copy()->subDay()->format('Y-m-d') : null;
-        $nextDate = $fechaGrupo ? $fechaGrupo->copy()->addDay()->format('Y-m-d') : null;
       @endphp
       <section class="date-group">
         <div class="date-head">
@@ -267,25 +291,6 @@
             <span class="name">{{ $fmtDate($first->fecha) }}</span>
             <span class="count">{{ $items->count() }} productos</span>
           </div>
-          @if($fechaIso)
-            <form class="date-nav" method="GET" action="{{ route('multiplataforma.index') }}">
-              @foreach($filters as $filterKey => $filterValue)
-                @if($filterKey !== 'fecha' && $filterValue !== '' && $filterValue !== 0 && $filterValue !== null)
-                  <input type="hidden" name="{{ $filterKey }}" value="{{ $filterValue }}">
-                @endif
-              @endforeach
-              <a class="btn-date" href="{{ $chipUrl(['fecha' => $prevDate]) }}" aria-label="Día anterior">
-                <i class="bi bi-chevron-left"></i>
-              </a>
-              <input type="date" name="fecha" value="{{ $fechaIso }}" onchange="this.form.submit()" aria-label="Seleccionar fecha">
-              <a class="btn-date" href="{{ $chipUrl(['fecha' => $nextDate]) }}" aria-label="Día siguiente">
-                <i class="bi bi-chevron-right"></i>
-              </a>
-              @if($filters['fecha'] !== '')
-                <a class="btn-date" href="{{ $chipUrl(['fecha' => '']) }}">Todos</a>
-              @endif
-            </form>
-          @endif
         </div>
 
         @foreach($items as $producto)
