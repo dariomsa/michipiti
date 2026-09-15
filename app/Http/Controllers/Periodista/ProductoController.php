@@ -98,6 +98,7 @@ class ProductoController extends Controller
             'secciones' => Seccion::query()->where('activa', true)->orderBy('nombre')->get(),
             'periodistas' => $this->periodistasDisponibles($user),
             'disenadores' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn ($query) => $query->where('name', 'disenador'))
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -725,6 +726,7 @@ class ProductoController extends Controller
     protected function periodistasDisponibles(?User $user): Collection
     {
         $query = User::query()
+            ->where('activo', 1)
             ->whereHas('roles', fn ($roleQuery) => $roleQuery->whereIn('name', ['periodista', 'editor']))
             ->orderBy('name');
 

@@ -55,6 +55,7 @@ class AudiovisualController extends Controller
             'secciones' => Seccion::query()->where('activa', true)->orderBy('nombre')->get(['id', 'nombre']),
             'prioridades' => $this->prioridades(),
             'videografos' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn (Builder $query) => $query->whereIn('name', $this->audiovisualStaffRoles()))
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -303,10 +304,12 @@ class AudiovisualController extends Controller
             'fecha' => $fecha,
             'secciones' => Seccion::query()->where('activa', true)->orderBy('nombre')->get(),
             'responsables' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn (Builder $query) => $query->whereIn('name', $this->audiovisualStaffRoles()))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'videografos' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn (Builder $query) => $query->whereIn('name', $this->audiovisualStaffRoles()))
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -630,6 +633,7 @@ class AudiovisualController extends Controller
             'totalFinalizados' => Audiovisual::query()->where('estado', 'FINALIZADO')->count(),
             'proximosAudiovisuales' => $proximos,
             'videografos' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn ($query) => $query->whereIn('name', $this->audiovisualStaffRoles()))
                 ->orderBy('name')
                 ->get(['id', 'name']),

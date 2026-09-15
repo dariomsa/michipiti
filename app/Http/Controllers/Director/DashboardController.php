@@ -93,10 +93,12 @@ class DashboardController extends Controller
             'tiposProducto' => TipoProducto::query()->orderBy('nombre')->get(['id', 'nombre', 'slug']),
             'secciones' => Seccion::query()->where('activa', true)->orderBy('nombre')->pluck('nombre'),
             'periodistas' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn ($query) => $query->whereIn('name', ['periodista', 'editor']))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'disenadores' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn ($query) => $query->where('name', 'disenador'))
                 ->orderBy('name')
                 ->get(['id', 'name']),

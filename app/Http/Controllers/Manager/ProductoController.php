@@ -33,6 +33,7 @@ class ProductoController extends BaseProductoController
             'movimientos' => $producto->movimientos,
             'mensajes' => $producto->mensajes()->with('autor:id,name')->orderBy('id')->get(),
             'disenadores' => User::query()
+                ->where('activo', 1)
                 ->whereHas('roles', fn ($query) => $query->whereIn('name', ['disenador', 'disenador_manager']))
                 ->where('email', 'not like', '%@demo.com')
                 ->orderBy('name')
