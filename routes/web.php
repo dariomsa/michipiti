@@ -9,6 +9,7 @@ use App\Http\Controllers\EmpresaActivaController;
 use App\Http\Controllers\Editor\ProductoController as EditorProductoController;
 use App\Http\Controllers\CalendarioEspecialController;
 use App\Http\Controllers\HorarioSlotController;
+use App\Http\Controllers\InformeController;
 use App\Http\Controllers\Manager\ProductoController as ManagerProductoController;
 use App\Http\Controllers\Mundial\ProductoController as MundialProductoController;
 use App\Http\Controllers\Mundial\PlanificadorController as MundialPlanificadorController;
@@ -67,6 +68,12 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
 });
 
+Route::middleware('auth')->group(function (): void {
+    Route::get('/informes', [InformeController::class, 'index'])->name('informes.index');
+    Route::get('/informes/{informe}', [InformeController::class, 'show'])->whereNumber('informe')->name('informes.show');
+    Route::post('/informes/{informe}/lectura', [InformeController::class, 'track'])->whereNumber('informe')->name('informes.track');
+});
+
 Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
     Route::post('/empresa-activa', [EmpresaActivaController::class, 'update'])->name('empresa-activa.update');
     Route::get('/mundial/listado', [MundialProductoController::class, 'index'])->name('mundial.index');
@@ -114,6 +121,10 @@ Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
 });
 
 Route::middleware(['auth', 'role:director'])->group(function (): void {
+    Route::get('/informes/subir', [InformeController::class, 'create'])->name('informes.create');
+    Route::post('/informes', [InformeController::class, 'store'])->name('informes.store');
+    Route::get('/informes/reportes', [InformeController::class, 'reportes'])->name('informes.reportes');
+    Route::delete('/informes/{informe}', [InformeController::class, 'destroy'])->whereNumber('informe')->name('informes.destroy');
     Route::get('/horario-slots', [HorarioSlotController::class, 'index'])->name('horario-slots.index');
     Route::patch('/horario-slots/{horarioSlot}', [HorarioSlotController::class, 'update'])->name('horario-slots.update');
     Route::get('/calendario-especial', [CalendarioEspecialController::class, 'index'])->name('calendario-especial.index');
