@@ -3,8 +3,9 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToEmpresa;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CalendarioEspecial extends Model
 {
@@ -17,6 +18,8 @@ class CalendarioEspecial extends Model
         'fecha',
         'motivo',
         'tipo_feriado',
+        'grupo',
+        'deportes_user_id',
     ];
 
     protected function casts(): array
@@ -31,5 +34,10 @@ class CalendarioEspecial extends Model
     {
         return $this->hasMany(CalendarioEspecialSlot::class, 'tipo_feriado', 'tipo_feriado')
             ->orderBy('hora');
+    }
+
+    public function deportesUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deportes_user_id');
     }
 }

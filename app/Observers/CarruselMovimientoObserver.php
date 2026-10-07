@@ -6,6 +6,7 @@ use App\Models\CarruselMovimiento;
 use App\Models\Producto;
 use App\Models\User;
 use App\Services\Carrusel\CarruselSlackNotifier;
+use Carbon\Carbon;
 
 class CarruselMovimientoObserver
 {
@@ -25,12 +26,15 @@ class CarruselMovimientoObserver
         $from = ucwords(strtolower(str_replace('_', ' ', (string) ($movimiento->estado_anterior ?? '—'))));
         $to = ucwords(strtolower(str_replace('_', ' ', (string) ($movimiento->estado_nuevo ?? '—'))));
         $motivo = $movimiento->motivo ? "Motivo: {$movimiento->motivo}\n" : '';
+        $fecha = optional($producto->fecha)->format('Y-m-d') ?: 'Sin fecha';
+        $hora = $producto->hora ? Carbon::parse($producto->hora)->format('H:i') : 'Sin hora';
         $sep = "────────────────────────\n";
 
         $texto =
             $sep.
             $notifier->formatHeader($producto)."\n".
             "➡️ {$accion} por {$autor}\n".
+            "🕒 Fecha planificada: {$fecha} | {$hora}\n".
             "Estado: {$from} → {$to}\n".
             $motivo.
             $sep;

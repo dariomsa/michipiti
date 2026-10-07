@@ -18,6 +18,7 @@ use App\Http\Controllers\Multiplataforma\PlanificadorController as Multiplatafor
 use App\Http\Controllers\PautaController;
 use App\Http\Controllers\PlanificadorController;
 use App\Http\Controllers\Periodista\ProductoController as PeriodistaProductoController;
+use App\Http\Controllers\TurnoController;
 use App\Http\Controllers\Videografia\AudiovisualController as VideografiaAudiovisualController;
 use App\Http\Controllers\Videografia\PlanificadorController as VideografiaPlanificadorController;
 use Illuminate\Support\Facades\Route;
@@ -75,6 +76,18 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware(['auth', 'empresa.activa'])->group(function (): void {
+    Route::get('/turnos/listado', [TurnoController::class, 'listado'])->name('turnos.listado');
+    Route::get('/turnos/administracion', [TurnoController::class, 'administracion'])->name('turnos.administracion');
+    Route::post('/turnos/fin-semana', [TurnoController::class, 'storeFinSemana'])->name('turnos.fin-semana.store');
+    Route::put('/turnos/fin-semana/{finSemana}', [TurnoController::class, 'updateFinSemana'])->name('turnos.fin-semana.update');
+    Route::delete('/turnos/fin-semana/{finSemana}', [TurnoController::class, 'destroyFinSemana'])->name('turnos.fin-semana.destroy');
+    Route::post('/turnos/feriados', [TurnoController::class, 'storeFeriado'])->name('turnos.feriados.store');
+    Route::put('/turnos/feriados/{feriado}', [TurnoController::class, 'updateFeriado'])->name('turnos.feriados.update');
+    Route::delete('/turnos/feriados/{feriado}', [TurnoController::class, 'destroyFeriado'])->name('turnos.feriados.destroy');
+    Route::post('/turnos/vigilia', [TurnoController::class, 'storeVigilia'])->name('turnos.vigilia.store');
+    Route::put('/turnos/vigilia/{vigilia}', [TurnoController::class, 'updateVigilia'])->name('turnos.vigilia.update');
+    Route::delete('/turnos/vigilia/{vigilia}', [TurnoController::class, 'destroyVigilia'])->name('turnos.vigilia.destroy');
+
     Route::post('/empresa-activa', [EmpresaActivaController::class, 'update'])->name('empresa-activa.update');
     Route::get('/mundial/listado', [MundialProductoController::class, 'index'])->name('mundial.index');
     Route::post('/mundial/listado/{producto}/metricool', [MundialProductoController::class, 'metricool'])->name('mundial.metricool');

@@ -932,6 +932,16 @@
         $user?->hasRole('director') ? ['label' => 'Reportes', 'icon' => 'bi-bar-chart-line', 'url' => route('informes.reportes')] : null,
     ]));
 
+    $puedeAdministrarTurnos = $user && (
+        $user->hasRole('director')
+        || in_array((int) $user->id, config('constants.turnos.permitidos', []), true)
+    );
+
+    $turnosMenu = $turnosMenu ?? array_values(array_filter([
+        ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => route('turnos.listado')],
+        $puedeAdministrarTurnos ? ['label' => 'Administración', 'icon' => 'bi-gear', 'url' => route('turnos.administracion')] : null,
+    ]));
+
     $layoutMenu = $layoutMenu ?? ($soloLecturaMundial ? [] : array_values(array_filter([
         $showDashboard ? ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'url' => route('dashboard')] : null,
         ['label' => 'Listado', 'icon' => 'bi-card-list', 'url' => $listadoUrl],
@@ -1154,6 +1164,29 @@
 
                 <ul class="sidebar-nav">
                     @foreach($informesMenu as $item)
+                        @php
+                            $href = $item['url'] ?? '#';
+                            $active = $href !== '#' && url()->current() === $href;
+                        @endphp
+
+                        <li>
+                            <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
+                                <i class="bi {{ $item['icon'] }}"></i>
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+
+            @if($turnosMenu !== [])
+                <div class="sidebar-title pt-3">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Turnos</span>
+                </div>
+
+                <ul class="sidebar-nav">
+                    @foreach($turnosMenu as $item)
                         @php
                             $href = $item['url'] ?? '#';
                             $active = $href !== '#' && url()->current() === $href;
