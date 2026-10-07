@@ -464,7 +464,7 @@ class TurnoController extends Controller
      */
     private function grupos(): array
     {
-        return ['A', 'B', 'C', 'D', 'E'];
+        return ['A', 'B', 'C', 'D', 'E', 'F'];
     }
 
     /**

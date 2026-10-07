@@ -2,6 +2,6 @@
 
 return [
     'turnos' => [
-        'permitidos' => [1],
+        'permitidos' => [14, 29],
     ],
 ];
