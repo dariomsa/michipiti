@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Grupos de Trabajo</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom smooth scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 116, 139, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full transition-colors duration-200">
+
+    <!-- Main Navbar Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-sky-600/30">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Grupos de Trabajo</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Distribución de Personal (Grupo A - Grupo F)</p>
+                </div>
+            </div>
+            
+            <!-- Botón opcional para activar/desactivar modo oscuro -->
+            <button onclick="toggleDarkMode()" class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <i id="themeIcon" class="fa-solid fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Search Bar Only -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 transition-colors">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                <input type="text" id="searchInput" oninput="renderCardsView()" placeholder="Buscar por nombre de colaborador o rol..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm transition-all">
+            </div>
+        </section>
+
+        <!-- Group Cards Grid (A to F) -->
+        <section id="cardsView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dynamic Group Cards populated via JS -->
+        </section>
+
+        <!-- Empty State Notification -->
+        <div id="noResults" class="hidden py-12 text-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <i class="fa-solid fa-user-slash text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
+            <h3 class="text-base font-semibold text-slate-700 dark:text-slate-300">No se encontraron integrantes</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Intenta con otro término de búsqueda.</p>
+        </div>
+
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+        <span id="toastMessage">Acción completada</span>
+    </div>
+
+    <script>
+        // Exact data for Groups A - F
+        const groupsData = [
+            {
+                group: "A",
+                badgeColor: "bg-sky-500",
+                members: [
+                    { role: "Líder del turno", name: "Imbaquingo Cabrera Jorge Raúl", icon: "fa-user-gear" },
+                    { role: "Periodista 1", name: "Vélez Barreiro María Alejandra", icon: "fa-newspaper" },
+                    { role: "Periodista 2", name: "Alvear Cisneros Giovanna Margarita", icon: "fa-newspaper" },
+                    { role: "Deportes (* rotan entre 4p)", name: "Sinchire Jiménez Alexis", icon: "fa-futbol" },
+                    { role: "Audiovisual", name: "Andrade Braganza Pía", icon: "fa-video" },
+                    { role: "Guardia pasiva Emerg", name: "Estrella Guerra Julio César", icon: "fa-shield-halved" }
+                ]
+            },
+            {
+                group: "B",
+                badgeColor: "bg-indigo-500",
+                members: [
+                    { role: "Líder del turno", name: "Quiroz Yánez Gabriela Giannina", icon: "fa-user-gear" },
+                    { role: "Periodista 1", name: "Estrella Garcés Santiago Oswaldo", icon: "fa-newspaper" },
+                    { role: "Periodista 2", name: "Freire Castañeda Ana Lucía", icon: "fa-newspaper" },
+                    { role: "Deportes", name: "Rojas Acevedo Carlos Augusto", icon: "fa-futbol" },
+                    { role: "Audiovisual", name: "Núñez del Arco Nieto Ramón Alfredo", icon: "fa-video" },
+                    { role: "Guardia pasiva Emerg", name: "Álvarez Hernández Oscar Alejandro", icon: "fa-shield-halved" }
+                ]
+            },
+            {
+                group: "C",
+                badgeColor: "bg-emerald-500",
+                members: [
+                    { role: "Líder del turno", name: "Jumbo Roman Betty Del Rocío", icon: "fa-user-gear" },
+                    { role: "Periodista 1", name: "Puga Serrano Kevin Mauricio", icon: "fa-newspaper" },
+                    { role: "Periodista 2", name: "Riera Alvear Marcela Fernanda", icon: "fa-newspaper" },
+                    { role: "Deportes", name: "Álvarez Duque Paulo Fernando", icon: "fa-futbol" },
+                    { role: "Audiovisual", name: "Jarrín Dávila Verónica Alexandra", icon: "fa-video" },
+                    { role: "Guardia pasiva Emerg", name: "Pesantes Cedeño Enrique Alejandro", icon: "fa-shield-halved" }
+                ]
+            },
+            {
+                group: "D",
+                badgeColor: "bg-amber-500",
+                members: [
+                    { role: "Líder del turno", name: "Astudillo Orellana Carlos Giovanny", icon: "fa-user-gear" },
+                    { role: "Periodista 1", name: "Jiménez Almeida Richard Marcelo", icon: "fa-newspaper" },
+                    { role: "Periodista 2", name: "Aguilar Silva María José", icon: "fa-newspaper" },
+                    { role: "Deportes", name: "Flores Trujillo Daniel Sebastián", icon: "fa-futbol" },
+                    { role: "Audiovisual", name: "Reinoso Morales Judith Catalina", icon: "fa-video" },
+                    { role: "Guardia pasiva Emerg", name: "Pallero Diego Roberto", icon: "fa-shield-halved" }
+                ]
+            },
+            {
+                group: "E",
+                badgeColor: "bg-rose-500",
+                members: [
+                    { role: "Líder del turno", name: "Castillo Espinoza Carolina Denise", icon: "fa-user-gear" },
+                    { role: "Periodista 1", name: "Cáceres Moisés Alejandro", icon: "fa-newspaper" },
+                    { role: "Periodista 2", name: "Silva Vaca Orlando Xavier", icon: "fa-newspaper" },
+                    { role: "Deportes", name: "Sinchire Jiménez Alexis...", icon: "fa-futbol" },
+                    { role: "Audiovisual", name: "Fernández Arguello Samuel Javier", icon: "fa-video" },
+                    { role: "Guardia pasiva Emerg", name: "Sánchez Cevallos Marco Vinicio", icon: "fa-shield-halved" }
+                ]
+            },
+            {
+                group: "F",
+                badgeColor: "bg-purple-500",
+                members: [
+                    { role: "Líder del turno", name: "Gavilanes Venegas Eugenia Paola", icon: "fa-user-gear" },
+                    { role: "Periodista 1", name: "Jara Cherrez Mónica Jacqueline", icon: "fa-newspaper" },
+                    { role: "Periodista 2", name: "Sánchez González Michelle", icon: "fa-newspaper" },
+                    { role: "Deportes", name: "Rojas Acevedo Carlos Augusto...", icon: "fa-futbol" },
+                    { role: "Audiovisual", name: "Bustillos Jorge Andrés", icon: "fa-video" },
+                    { role: "Guardia pasiva Emerg", name: "Estrella Guerra Julio César...", icon: "fa-shield-halved" }
+                ]
+            }
+        ];
+
+        window.onload = function() {
+            // Dark mode initialization con comprobación segura
+            const isDarkMode = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+            }
+
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.className = isDarkMode ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-slate-600';
+            }
+
+            renderCardsView();
+        };
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                icon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-slate-600';
+            }
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function renderCardsView() {
+            const container = document.getElementById('cardsView');
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            container.innerHTML = '';
+
+            let hasAnyResult = false;
+
+            groupsData.forEach(g => {
+                const filteredMembers = g.members.filter(m => 
+                    query === '' || m.name.toLowerCase().includes(query) || m.role.toLowerCase().includes(query)
+                );
+
+                if (filteredMembers.length === 0) return;
+
+                hasAnyResult = true;
+
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md";
+
+                let membersListHTML = '';
+                filteredMembers.forEach(m => {
+                    const isLeader = m.role.includes("Líder");
+                    const isGuard = m.role.includes("Guardia");
+
+                    membersListHTML += `
+                        <div class="p-3.5 rounded-xl ${isLeader ? 'bg-sky-50/80 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/40' : isGuard ? 'bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'} transition-all">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1">
+                                    <span class="inline-block text-[11px] font-semibold tracking-wide uppercase ${isLeader ? 'text-sky-700 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400'} mb-0.5">
+                                        <i class="fa-solid ${m.icon} me-1 opacity-70"></i>${m.role}
+                                    </span>
+                                    <h4 class="text-sm font-semibold ${isLeader ? 'text-sky-900 dark:text-sky-200' : 'text-slate-800 dark:text-slate-100'} leading-snug">
+                                        ${m.name}
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-700/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/80">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="w-3 h-3 rounded-full ${g.badgeColor}"></span>
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base">GRUPO ${g.group}</h3>
+                        </div>
+                        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+                            ${filteredMembers.length} integrantes
+                        </span>
+                    </div>
+                    <div class="p-4 space-y-2.5 flex-1">
+                        ${membersListHTML}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            document.getElementById('noResults').classList.toggle('hidden', hasAnyResult);
+        }
+
+        function copyToClipboard() {
+            let textOutput = "";
+            groupsData.forEach(g => {
+                textOutput += `=== GRUPO ${g.group} ===\n`;
+                g.members.forEach(m => {
+                    textOutput += `${m.role}: ${m.name}\n`;
+                });
+                textOutput += `\n`;
+            });
+
+            const textarea = document.createElement('textarea');
+            textarea.value = textOutput;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("¡Lista de colaboradores copiada al portapapeles!");
+            } catch (err) {
+                showToast("Error al copiar.");
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toastMessage');
+            msgEl.textContent = message;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

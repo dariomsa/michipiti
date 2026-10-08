@@ -41,14 +41,15 @@ class CarruselMovimientoObserver
 
         $notifier->notifyInvolucrados($producto, $texto);
 
-        if (in_array(self::SLACK_MOVIMIENTOS_USER_ID, $notifier->involucradosUserIds($producto), true)) {
-            return;
-        }
+        // Pausado por vacaciones: no enviar copia fija de movimientos por DM.
+        // if (in_array(self::SLACK_MOVIMIENTOS_USER_ID, $notifier->involucradosUserIds($producto), true)) {
+        //     return;
+        // }
 
-        $destinatario = User::query()->find(self::SLACK_MOVIMIENTOS_USER_ID);
+        // $destinatario = User::query()->find(self::SLACK_MOVIMIENTOS_USER_ID);
 
-        if ($destinatario) {
-            app(\App\Services\Slack\SlackNotificationService::class)->sendDM($destinatario, $texto);
-        }
+        // if ($destinatario) {
+        //     app(\App\Services\Slack\SlackNotificationService::class)->sendDM($destinatario, $texto);
+        // }
     }
 }
