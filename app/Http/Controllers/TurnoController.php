@@ -28,10 +28,11 @@ class TurnoController extends Controller
             'turnosData' => [
                 'fines' => FinSemana::query()
                     ->with(['deportesUser', 'jefeTurnoUser'])
+                    ->orderBy('anio')
                     ->orderBy('orden')
                     ->orderBy('id')
                     ->get()
-                    ->map(fn (FinSemana $item): array => $this->formatFinSemanaForListado($item, $anioTurnos))
+                    ->map(fn (FinSemana $item): array => $this->formatFinSemanaForListado($item))
                     ->values(),
                 'feriados' => CalendarioEspecial::query()
                     ->with('deportesUser')
@@ -41,10 +42,11 @@ class TurnoController extends Controller
                     ->values(),
                 'vigilia' => Vigilia::query()
                     ->with('integrantes.usuario')
+                    ->orderBy('anio')
                     ->orderBy('orden')
                     ->orderBy('semana')
                     ->get()
-                    ->map(fn (Vigilia $item): array => $this->formatVigiliaForListado($item, $anioTurnos))
+                    ->map(fn (Vigilia $item): array => $this->formatVigiliaForListado($item))
                     ->values(),
             ],
         ]);
@@ -62,6 +64,7 @@ class TurnoController extends Controller
         return view('turnos.administracion', [
             'finesSemana' => FinSemana::query()
                 ->with(['deportesUser', 'jefeTurnoUser'])
+                ->orderBy('anio')
                 ->orderBy('orden')
                 ->orderBy('id')
                 ->get(),
@@ -71,6 +74,7 @@ class TurnoController extends Controller
                 ->get(),
             'vigilias' => Vigilia::query()
                 ->with('integrantes.usuario')
+                ->orderBy('anio')
                 ->orderBy('orden')
                 ->orderBy('semana')
                 ->get(),
@@ -219,6 +223,7 @@ class TurnoController extends Controller
     {
         return [
             'mes' => ['required', 'string', 'max:30'],
+            'anio' => ['required', 'integer', 'min:2020', 'max:2100'],
             'fines_de_semana' => ['required', 'integer', Rule::in([1, 2, 3, 4, 5])],
             'jefe_turno_user_id' => [
                 'nullable',
@@ -318,13 +323,16 @@ class TurnoController extends Controller
      */
     private function validatedVigilia(Request $request, ?Vigilia $vigilia = null): array
     {
-        $uniqueSemana = Rule::unique('vigilia', 'semana');
+        $anio = (int) $request->input('anio');
+        $uniqueSemana = Rule::unique('vigilia', 'semana')
+            ->where(fn ($query) => $query->where('anio', $anio));
 
         if ($vigilia) {
             $uniqueSemana = $uniqueSemana->ignore($vigilia->id);
         }
 
         $validated = $request->validate([
+            'anio' => ['required', 'integer', 'min:2020', 'max:2100'],
             'semana' => ['required', 'integer', 'min:1', 'max:53', $uniqueSemana],
             'grupo' => ['required', 'integer', Rule::in($this->gruposVigilia())],
             'integrante_user_ids' => ['nullable', 'array'],
@@ -358,13 +366,16 @@ class TurnoController extends Controller
         );
     }
 
-    private function formatFinSemanaForListado(FinSemana $item, int $anio): array
+    private function formatFinSemanaForListado(FinSemana $item): array
     {
+        $anio = (int) ($item->anio ?: now()->year);
         $range = $this->finSemanaRange($item->mes, (int) $item->fines_de_semana, $anio);
 
         return [
             'id' => $item->id,
             'mes' => $item->mes,
+            'anio' => $anio,
+            'mes_label' => $item->mes . ' - ' . $anio,
             'fin_semana_numero' => (int) $item->fines_de_semana,
             'fin_semana_label' => 'Fin de semana ' . $item->fines_de_semana,
             'fecha_inicio' => $range['inicio']?->toDateString(),
@@ -390,13 +401,15 @@ class TurnoController extends Controller
         ];
     }
 
-    private function formatVigiliaForListado(Vigilia $item, int $anio): array
+    private function formatVigiliaForListado(Vigilia $item): array
     {
+        $anio = (int) ($item->anio ?: now()->year);
         $inicio = CarbonImmutable::now()->setISODate($anio, (int) $item->semana)->startOfDay();
         $fin = $inicio->addDays(6);
 
         return [
             'id' => $item->id,
+            'anio' => $anio,
             'semana' => $item->semana,
             'grupo' => $item->grupo,
             'fecha_inicio' => $inicio->toDateString(),

@@ -1,19 +1,26 @@
 @php
   $mesValue = old('mes', $item?->mes ?? 'ENERO');
+  $anioValue = old('anio', $item?->anio ?? $anioTurnos);
   $finSemanaValue = old('fines_de_semana', $item?->fines_de_semana ?? 1);
   $jefeTurnoUserId = old('jefe_turno_user_id', $item?->jefe_turno_user_id);
   $grupoValue = old('grupo', $item?->grupo ?? 'A');
   $deportesUserId = old('deportes_user_id', $item?->deportes_user_id);
 @endphp
 
-<div class="js-fin-semana-fieldset" data-year="{{ $anioTurnos }}">
-  <div class="mb-3">
+<div class="js-fin-semana-fieldset">
+  <div class="row g-3 mb-3">
+    <div class="col-md-7">
     <label class="form-label small fw-bold">Mes</label>
     <select name="mes" class="form-select rounded-0 js-fin-semana-mes" required>
       @foreach($meses as $mes)
         <option value="{{ $mes }}" @selected($mesValue === $mes)>{{ ucfirst(strtolower($mes)) }}</option>
       @endforeach
     </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label small fw-bold">Año</label>
+      <input type="number" name="anio" class="form-control rounded-0 js-fin-semana-anio" value="{{ $anioValue }}" min="2020" max="2100" required>
+    </div>
   </div>
 
   <div class="mb-3">

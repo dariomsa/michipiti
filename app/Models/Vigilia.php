@@ -11,6 +11,7 @@ class Vigilia extends Model
 
     protected $fillable = [
         'sorteo_fecha',
+        'anio',
         'semana',
         'grupo',
         'personas',
@@ -21,6 +22,7 @@ class Vigilia extends Model
     {
         return [
             'sorteo_fecha' => 'date',
+            'anio' => 'integer',
             'semana' => 'integer',
             'personas' => 'array',
             'orden' => 'integer',

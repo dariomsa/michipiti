@@ -11,6 +11,7 @@ class FinSemana extends Model
 
     protected $fillable = [
         'mes',
+        'anio',
         'fines_de_semana',
         'jefe_turno',
         'jefe_turno_user_id',
@@ -22,6 +23,7 @@ class FinSemana extends Model
     protected function casts(): array
     {
         return [
+            'anio' => 'integer',
             'orden' => 'integer',
         ];
     }

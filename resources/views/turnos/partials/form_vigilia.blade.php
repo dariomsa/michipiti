@@ -3,10 +3,23 @@
       ->map(fn ($userId) => (string) $userId)
       ->all();
   $grupoValue = old('grupo', $item?->grupo ?? 1);
+  $anioValue = old('anio', $item?->anio ?? $anioVigilia);
 @endphp
 
 <div class="row g-3">
-  <div class="col-md-6 js-week-field">
+  <div class="col-md-4 js-week-field">
+    <label class="form-label small fw-bold">Año</label>
+    <input
+      type="number"
+      name="anio"
+      class="form-control rounded-0 js-vigilia-anio"
+      value="{{ $anioValue }}"
+      min="2020"
+      max="2100"
+      required
+    >
+  </div>
+  <div class="col-md-4 js-week-field">
     <label class="form-label small fw-bold">Semana</label>
     <input
       type="number"
@@ -15,12 +28,11 @@
       value="{{ old('semana', $item?->semana) }}"
       min="1"
       max="53"
-      data-year="{{ $anioVigilia }}"
       required
     >
     <div class="form-text js-week-range">Seleccione una semana para ver el rango de fechas.</div>
   </div>
-  <div class="col-md-6">
+  <div class="col-md-4">
     <label class="form-label small fw-bold">Grupo</label>
     <select name="grupo" class="form-select rounded-0" required>
       @foreach($gruposVigilia as $grupo)

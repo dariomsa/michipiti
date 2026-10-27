@@ -7,7 +7,7 @@
   $activeTab = in_array($activeTab, ['fines', 'feriados', 'vigilia'], true) ? $activeTab : 'fines';
   $monthName = fn ($fecha) => $fecha ? ($meses[((int) $fecha->format('n')) - 1] ?? '-') : '-';
   $mesNumero = fn ($mes) => array_search($mes, $meses, true) === false ? null : array_search($mes, $meses, true) + 1;
-  $weekendRange = function ($mes, $weekend) use ($anioVigilia, $mesNumero) {
+  $weekendRange = function ($mes, $weekend, $anio) use ($mesNumero) {
       $weekend = (int) $weekend;
       $month = $mesNumero($mes);
 
@@ -15,19 +15,19 @@
           return null;
       }
 
-      $firstDay = \Carbon\CarbonImmutable::create($anioVigilia, $month, 1);
+      $firstDay = \Carbon\CarbonImmutable::create((int) $anio, $month, 1);
       $firstSaturday = $firstDay->isSaturday() ? $firstDay : $firstDay->next(\Carbon\CarbonInterface::SATURDAY);
       $start = $firstSaturday->addWeeks($weekend - 1);
       $end = $start->addDay();
 
       return $start->format('d/m/Y') . ' - ' . $end->format('d/m/Y');
   };
-  $weekRange = function ($week) use ($anioVigilia) {
+  $weekRange = function ($week, $anio) {
       if (! $week) {
           return '-';
       }
 
-      $start = \Carbon\CarbonImmutable::now()->setISODate($anioVigilia, (int) $week)->startOfDay();
+      $start = \Carbon\CarbonImmutable::now()->setISODate((int) $anio, (int) $week)->startOfDay();
       $end = $start->addDays(6);
 
       return $start->format('d/m/Y') . ' - ' . $end->format('d/m/Y');
@@ -169,9 +169,9 @@
             @forelse($finesSemana as $item)
               <tr>
                 <td>{{ $item->id }}</td>
-                <td class="fw-bold">{{ $item->mes }}</td>
+                <td class="fw-bold">{{ $item->mes }} - {{ $item->anio }}</td>
                 <td>{{ in_array((int) $item->fines_de_semana, [1, 2, 3, 4, 5], true) ? 'Fin de semana ' . $item->fines_de_semana : $item->fines_de_semana }}</td>
-                <td>{{ $weekendRange($item->mes, $item->fines_de_semana) ?: '-' }}</td>
+                <td>{{ $weekendRange($item->mes, $item->fines_de_semana, $item->anio) ?: '-' }}</td>
                 <td>{{ $item->jefeTurnoUser?->name ?: ($item->jefe_turno ?: '-') }}</td>
                 <td><span class="badge bg-secondary rounded-0">{{ $item->grupo }}</span></td>
                 <td>{{ $item->deportesUser?->name ?: '-' }}</td>
@@ -247,6 +247,7 @@
         <table class="turnos-table">
           <thead>
             <tr>
+              <th>Año</th>
               <th>Semana</th>
               <th>Fechas</th>
               <th>Grupo</th>
@@ -257,8 +258,9 @@
           <tbody>
             @forelse($vigilias as $item)
               <tr>
+                <td>{{ $item->anio }}</td>
                 <td class="fw-bold">Semana {{ $item->semana }}</td>
-                <td>{{ $weekRange($item->semana) }}</td>
+                <td>{{ $weekRange($item->semana, $item->anio) }}</td>
                 <td><span class="badge bg-secondary rounded-0">Grupo {{ $item->grupo }}</span></td>
                 <td class="turnos-personas">{{ $item->integrantes->pluck('usuario.name')->filter()->join(', ') ?: '-' }}</td>
                 <td class="text-end">
@@ -276,7 +278,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="5" class="text-muted p-4">Todavía no hay semanas de vigilia configuradas.</td>
+                <td colspan="6" class="text-muted p-4">Todavía no hay semanas de vigilia configuradas.</td>
               </tr>
             @endforelse
           </tbody>
@@ -350,10 +352,11 @@
     document.querySelectorAll('.js-vigilia-semana').forEach((input) => {
       const wrapper = input.closest('.js-week-field');
       const output = wrapper?.querySelector('.js-week-range');
+      const yearInput = input.closest('.row')?.querySelector('.js-vigilia-anio');
 
       const refreshRange = () => {
         const week = Number(input.value);
-        const year = Number(input.dataset.year);
+        const year = Number(yearInput?.value);
 
         if (!output || !week || week < 1 || week > 53 || !year) {
           if (output) {
@@ -368,13 +371,14 @@
       };
 
       input.addEventListener('input', refreshRange);
+      yearInput?.addEventListener('input', refreshRange);
       refreshRange();
     });
 
     const monthMap = @json(array_combine($meses, range(1, count($meses))));
 
     const weekendRange = (year, month, weekend) => {
-      if (!year || !month || !weekend || weekend < 1 || weekend > 4) {
+      if (!year || !month || !weekend || weekend < 1 || weekend > 5) {
         return null;
       }
 
@@ -392,13 +396,14 @@
 
     document.querySelectorAll('.js-fin-semana-fieldset').forEach((fieldset) => {
       const monthInput = fieldset.querySelector('.js-fin-semana-mes');
+      const yearInput = fieldset.querySelector('.js-fin-semana-anio');
       const weekendInput = fieldset.querySelector('.js-fin-semana-numero');
       const output = fieldset.querySelector('.js-fin-semana-range');
 
       const refreshRange = () => {
         const month = monthMap[monthInput?.value] || null;
         const weekend = Number(weekendInput?.value);
-        const year = Number(fieldset.dataset.year);
+        const year = Number(yearInput?.value);
         const range = weekendRange(year, month, weekend);
 
         if (output) {
@@ -407,6 +412,7 @@
       };
 
       monthInput?.addEventListener('change', refreshRange);
+      yearInput?.addEventListener('input', refreshRange);
       weekendInput?.addEventListener('change', refreshRange);
       refreshRange();
     });
